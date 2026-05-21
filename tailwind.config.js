@@ -1,0 +1,137 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    './app/**/*.{js,ts,jsx,tsx}',
+    './src/**/*.{js,ts,jsx,tsx}',
+  ],
+  presets: [require('nativewind/preset')],
+  theme: {
+    extend: {
+      colors: {
+        // Brand / primary
+        primary: {
+          DEFAULT: '#2563eb',
+          foreground: '#ffffff',
+          50: '#eff6ff',
+          100: '#dbeafe',
+          200: '#bfdbfe',
+          300: '#93c5fd',
+          400: '#60a5fa',
+          500: '#3b82f6',
+          600: '#2563eb',
+          700: '#1d4ed8',
+          800: '#1e40af',
+          900: '#1e3a8a',
+        },
+        // Semantic surfaces
+        background: '#ffffff',
+        foreground: '#0f172a',
+        card: {
+          DEFAULT: '#ffffff',
+          foreground: '#0f172a',
+        },
+        popover: {
+          DEFAULT: '#ffffff',
+          foreground: '#0f172a',
+        },
+        secondary: {
+          DEFAULT: '#f1f5f9',
+          foreground: '#0f172a',
+        },
+        muted: {
+          DEFAULT: '#f8fafc',
+          foreground: '#64748b',
+        },
+        accent: {
+          DEFAULT: '#f1f5f9',
+          foreground: '#0f172a',
+        },
+        destructive: {
+          DEFAULT: '#ef4444',
+          foreground: '#ffffff',
+        },
+        success: {
+          DEFAULT: '#10b981',
+          foreground: '#ffffff',
+        },
+        warning: {
+          DEFAULT: '#f59e0b',
+          foreground: '#ffffff',
+        },
+        info: {
+          DEFAULT: '#3b82f6',
+          foreground: '#ffffff',
+        },
+        border: '#e2e8f0',
+        input: '#e2e8f0',
+        'input-background': '#f8fafc',
+        ring: '#2563eb',
+        // Slate palette (used widely in Figma design)
+        slate: {
+          50: '#f8fafc',
+          100: '#f1f5f9',
+          200: '#e2e8f0',
+          300: '#cbd5e1',
+          400: '#94a3b8',
+          500: '#64748b',
+          600: '#475569',
+          700: '#334155',
+          800: '#1e293b',
+          900: '#0f172a',
+        },
+        // Chart accents
+        chart: {
+          1: '#2563eb',
+          2: '#10b981',
+          3: '#f59e0b',
+          4: '#8b5cf6',
+          5: '#ec4899',
+        },
+      },
+      borderRadius: {
+        sm: 4,
+        DEFAULT: 6,
+        md: 6,
+        lg: 8,
+        xl: 12,
+        '2xl': 16,
+        '3xl': 24,
+      },
+      fontSize: {
+        '2xs': 10,
+        xs: 12,
+        sm: 13,
+        base: 14,
+        md: 15,
+        lg: 16,
+        xl: 18,
+        '2xl': 22,
+        '3xl': 28,
+        '4xl': 34,
+      },
+      spacing: {
+        '0.5': 2,
+        '1': 4,
+        '1.5': 6,
+        '2': 8,
+        '2.5': 10,
+        '3': 12,
+        '3.5': 14,
+        '4': 16,
+        '5': 20,
+        '6': 24,
+        '7': 28,
+        '8': 32,
+        '9': 36,
+        '10': 40,
+        '11': 44,
+        '12': 48,
+        '14': 56,
+        '16': 64,
+        '20': 80,
+        '24': 96,
+      },
+    },
+  },
+  plugins: [],
+};

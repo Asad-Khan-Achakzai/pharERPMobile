@@ -1,98 +1,101 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import * as React from 'react';
+import { View } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
+import { Bell, ChevronRight, Calendar as CalendarIcon } from 'lucide-react-native';
+import { Screen } from '@/ui/Screen';
+import { Card } from '@/ui/Card';
+import { Text, H3 } from '@/ui/Text';
+import { Button } from '@/ui/Button';
+import { SkeletonRow } from '@/ui/Skeleton';
+import { HomeHero } from '@/features/home/HomeHero';
+import { KPIGrid } from '@/features/home/KPIGrid';
+import { CheckInCard } from '@/features/attendance/CheckInCard';
+import { OutboxFooter } from '@/features/sync/OutboxFooter';
+import { CompanyGate } from '@/features/onboarding/CompanyGate';
+import { dashboardApi } from '@/api/dashboard';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const router = useRouter();
+  const home = useQuery({
+    queryKey: ['dashboard', 'home'],
+    queryFn: () => dashboardApi.home(),
+  });
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  return (
+    <CompanyGate>
+      <Screen
+        padded={false}
+        refreshing={home.isRefetching}
+        onRefresh={() => home.refetch()}
+      >
+        <HomeHero />
+        <OutboxFooter />
+        <CheckInCard />
+        <View className="mt-2">
+          {home.isLoading ? (
+            <View className="px-4">
+              <SkeletonRow count={2} />
+            </View>
+          ) : (
+            <KPIGrid data={home.data} />
+          )}
+        </View>
+
+        <Card className="mx-4 mt-3">
+          <View className="flex-row items-center justify-between mb-3">
+            <View className="flex-row items-center">
+              <CalendarIcon size={18} color="#0f172a" />
+              <H3 className="ml-2">Today&apos;s route</H3>
+            </View>
+            <Button
+              variant="ghost"
+              size="sm"
+              onPress={() => router.push('/(tabs)/visits')}
+              rightIcon={<ChevronRight size={16} color="#2563eb" />}
+            >
+              <Text tone="primary" size="sm" weight="medium">
+                See all
+              </Text>
+            </Button>
+          </View>
+          <View className="flex-row items-center justify-between">
+            <Text size="sm" tone="muted">
+              {home.data?.today?.completedCount ?? 0} / {home.data?.today?.plannedCount ?? 0} visits completed
+            </Text>
+            <Text size="sm" tone="warning" weight="medium">
+              {home.data?.today?.missedCount ?? 0} missed
+            </Text>
+          </View>
+        </Card>
+
+        <Card className="mx-4 mt-3">
+          <View className="flex-row items-center justify-between mb-2">
+            <View className="flex-row items-center">
+              <Bell size={18} color="#0f172a" />
+              <H3 className="ml-2">Announcements</H3>
+            </View>
+          </View>
+          {(home.data?.announcements ?? []).length === 0 ? (
+            <Text size="sm" tone="muted">
+              No announcements right now.
+            </Text>
+          ) : (
+            home.data!.announcements!.slice(0, 3).map((a) => (
+              <View key={a._id} className="mb-2">
+                <Text size="sm" weight="medium">
+                  {a.title}
+                </Text>
+                {a.body ? (
+                  <Text size="xs" tone="muted" numberOfLines={2}>
+                    {a.body}
+                  </Text>
+                ) : null}
+              </View>
+            ))
+          )}
+        </Card>
+      </Screen>
+    </CompanyGate>
   );
 }
-
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
