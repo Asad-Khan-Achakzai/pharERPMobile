@@ -3,12 +3,34 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { StatusBar } from 'expo-status-bar';
 import { queryClient } from '@/data/queryClient';
 import { ToastProvider } from '@/ui/Toast';
+import { ThemeProvider } from '@/theme/ThemeProvider';
+import { ThemedAppShell } from '@/theme/ThemedAppShell';
 import { initDb } from '@/data/db';
 import { startSyncEngine } from '@/data/syncEngine';
+import { MasterDataSyncBridge } from '@/hooks/useMasterDataSync';
 import { useAuthStore } from '@/state/authStore';
+import { useLiveTracking } from '@/hooks/useLiveTracking';
+
+function LiveTrackingBridge() {
+  useLiveTracking();
+  return null;
+}
+
+function PushRegistrationBridge() {
+  const serverConfig = useAuthStore((s) => s.serverConfig);
+  const accessToken = useAuthStore((s) => s.accessToken);
+
+  React.useEffect(() => {
+    if (!accessToken || !serverConfig?.push?.enabled) return;
+    void import('@/features/push/registerPush').then(({ registerPushNotifications }) =>
+      registerPushNotifications(),
+    );
+  }, [accessToken, serverConfig?.push?.enabled]);
+
+  return null;
+}
 
 export const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   React.useEffect(() => {
@@ -26,14 +48,20 @@ export const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
-          <BottomSheetModalProvider>
-            <ToastProvider>
-              <StatusBar style="dark" />
-              {children}
-            </ToastProvider>
-          </BottomSheetModalProvider>
-        </QueryClientProvider>
+        <ThemeProvider>
+          <ThemedAppShell>
+            <QueryClientProvider client={queryClient}>
+              <BottomSheetModalProvider>
+                <ToastProvider>
+                  <PushRegistrationBridge />
+                  <LiveTrackingBridge />
+                  <MasterDataSyncBridge />
+                  {children}
+                </ToastProvider>
+              </BottomSheetModalProvider>
+            </QueryClientProvider>
+          </ThemedAppShell>
+        </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

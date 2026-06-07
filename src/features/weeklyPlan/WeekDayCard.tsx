@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { View } from 'react-native';
 import { format, parseISO } from 'date-fns';
-import { Plus, Trash2 } from 'lucide-react-native';
+import { Plus, Trash2, Route } from 'lucide-react-native';
 import { Card } from '@/ui/Card';
 import { Text, Label } from '@/ui/Text';
 import { Button } from '@/ui/Button';
@@ -27,6 +27,8 @@ interface WeekDayCardProps {
   onAddDoctors: () => void;
   onAddTask: () => void;
   onUpdateDraft: (patch: Partial<DayDraftState>) => void;
+  onOptimizeRoute?: () => void;
+  optimizing?: boolean;
 }
 
 export const WeekDayCard: React.FC<WeekDayCardProps> = ({
@@ -38,6 +40,8 @@ export const WeekDayCard: React.FC<WeekDayCardProps> = ({
   onAddDoctors,
   onAddTask,
   onUpdateDraft,
+  onOptimizeRoute,
+  optimizing = false,
 }) => {
   const dayLabel = format(parseISO(date), 'EEEE');
   const dateLabel = format(parseISO(date), 'd MMM');
@@ -69,6 +73,18 @@ export const WeekDayCard: React.FC<WeekDayCardProps> = ({
       </View>
 
       <Label className="mb-1">Visits</Label>
+      {editable && savedVisits.length >= 2 && onOptimizeRoute ? (
+        <Button
+          size="sm"
+          variant="outline"
+          className="mb-2 self-start"
+          loading={optimizing}
+          onPress={onOptimizeRoute}
+          leftIcon={<Route size={14} color="#2563eb" />}
+        >
+          Optimize route
+        </Button>
+      ) : null}
       {savedVisits.length === 0 && draft.visits.length === 0 ? (
         <Text size="xs" tone="muted" className="mb-2">
           No visits yet

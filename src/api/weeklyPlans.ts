@@ -90,4 +90,17 @@ export const weeklyPlansApi = {
     const resp = await api.post(`/weekly-plans/${id}/copy-previous-week`);
     return unwrap<WeeklyPlanDetail>(resp);
   },
+
+  async optimizeRoute(
+    id: ID,
+    body: {
+      date: string;
+      startLat?: number | null;
+      startLng?: number | null;
+      itemCoordinates?: Record<string, { lat: number; lng: number }>;
+    }
+  ): Promise<unknown> {
+    const resp = await api.post(`/weekly-plans/${id}/optimize-route`, body);
+    return unwrap(resp);
+  },
 };

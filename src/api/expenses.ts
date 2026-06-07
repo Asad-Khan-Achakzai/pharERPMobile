@@ -64,6 +64,27 @@ export const expensesApi = {
   async remove(id: ID): Promise<void> {
     await api.delete(`/expenses/${id}`);
   },
+
+  async inbox(): Promise<Expense[]> {
+    try {
+      const resp = await api.get('/expenses/inbox', { params: { limit: 50 } });
+      const data = resp.data;
+      const rows = data.data ?? data;
+      return Array.isArray(rows) ? rows : [];
+    } catch {
+      return [];
+    }
+  },
+
+  async approve(id: ID): Promise<Expense> {
+    const resp = await api.post(`/expenses/${id}/approve`);
+    return unwrap<Expense>(resp);
+  },
+
+  async reject(id: ID, reason: string): Promise<Expense> {
+    const resp = await api.post(`/expenses/${id}/reject`, { reason });
+    return unwrap<Expense>(resp);
+  },
 };
 
 /**

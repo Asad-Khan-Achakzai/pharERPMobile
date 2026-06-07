@@ -22,17 +22,18 @@ export interface RepDashboard {
 
 export interface TeamSummary {
   teamSize?: number;
-  presentCount?: number;
-  visitsToday?: number;
-  ordersTodayAmount?: number;
-  laggards?: { userId: ID; name: string; visitsCompleted?: number; ordersAmount?: number }[];
-  members?: {
-    userId: ID;
-    name: string;
-    attendanceStatus?: string;
-    visitsCompleted?: number;
-    ordersAmount?: number;
-  }[];
+  activeReps?: number;
+  pendingApprovalsCount?: number;
+  today?: {
+    date?: string;
+    visited?: number;
+    missed?: number;
+    pending?: number;
+    total?: number;
+    coveragePercent?: number;
+    outOfSequenceCount?: number;
+    unplannedCount?: number;
+  };
 }
 
 export const dashboardApi = {

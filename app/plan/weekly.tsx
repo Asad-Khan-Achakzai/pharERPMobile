@@ -15,6 +15,7 @@ import { Button } from '@/ui/Button';
 import { SkeletonRow } from '@/ui/Skeleton';
 import { EmptyState } from '@/ui/EmptyState';
 import { FAB } from '@/ui/FAB';
+import { masterQueries } from '@/data/masterQueries';
 import { weeklyPlansApi } from '@/api/weeklyPlans';
 import { ApiError } from '@/api/client';
 import { useToast } from '@/ui/Toast';
@@ -102,11 +103,7 @@ function WeeklyPlanImpl() {
 
   const list = useQuery({
     queryKey: ['plans', teamView ? 'team' : 'mine'],
-    queryFn: () =>
-      weeklyPlansApi.list({
-        limit: 100,
-        ...(teamView ? { scope: 'team' } : {}),
-      }),
+    queryFn: () => masterQueries.weeklyPlansList(teamView ? 'team' : 'mine'),
   });
 
   const plans = list.data ?? [];

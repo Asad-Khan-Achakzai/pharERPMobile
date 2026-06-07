@@ -39,12 +39,12 @@ import { Badge } from '@/ui/Badge';
 import { StickyActionBar } from '@/ui/StickyActionBar';
 import { SkeletonRow } from '@/ui/Skeleton';
 import { useToast } from '@/ui/Toast';
-import { pharmaciesApi } from '@/api/pharmacies';
-import { distributorsApi, productsApi } from '@/api/products';
-import { doctorsApi } from '@/api/doctors';
+import { masterQueries } from '@/data/masterQueries';
+import { distributorsApi } from '@/api/products';
 import { ordersApi, type NewOrderLineInput } from '@/api/orders';
 import { ApiError } from '@/api/client';
 import { outbox } from '@/data/outbox';
+import { localEntities } from '@/data/localEntities';
 import { flushOutbox } from '@/data/syncEngine';
 import { useAuthStore } from '@/state/authStore';
 import { PermissionGate } from '@/auth/PermissionGate';
@@ -99,13 +99,13 @@ function NewOrderImpl() {
   const pharmacies = useQuery({
     queryKey: ['pharmacies', 'lookup', pharmacyQ],
     enabled: step === 'parties' && pharmacyQ.trim().length >= 1,
-    queryFn: () => pharmaciesApi.lookup(pharmacyQ.trim()),
+    queryFn: () => masterQueries.pharmaciesLookup(pharmacyQ.trim()),
   });
 
   const distributors = useQuery({
     queryKey: ['distributors', 'lookup'],
     enabled: step === 'parties' && !!pharmacy,
-    queryFn: () => distributorsApi.lookup(''),
+    queryFn: () => masterQueries.distributorsLookup(''),
   });
 
   /**
@@ -118,7 +118,7 @@ function NewOrderImpl() {
     queryKey: ['doctors', 'lookup', 'pharmacy', pharmacy?._id],
     enabled: !!pharmacy?._id,
     queryFn: async () => {
-      const list = await doctorsApi.lookup({
+      const list = await masterQueries.doctorsLookup({
         pharmacyId: pharmacy!._id,
         limit: 100,
         isActive: 'true',
@@ -138,7 +138,7 @@ function NewOrderImpl() {
     queryKey: ['doctors', 'lookup', 'search', doctorQ.trim()],
     enabled: !!pharmacy && doctorQ.trim().length >= 1,
     queryFn: () =>
-      doctorsApi.lookup({
+      masterQueries.doctorsLookup({
         search: doctorQ.trim(),
         limit: 25,
         isActive: 'true',
@@ -169,7 +169,7 @@ function NewOrderImpl() {
   const productsList = useQuery({
     queryKey: ['products', 'list'],
     enabled: step !== 'parties',
-    queryFn: () => productsApi.list(),
+    queryFn: () => masterQueries.productsList(),
   });
 
   const filteredProducts = React.useMemo(() => {
@@ -298,13 +298,34 @@ function NewOrderImpl() {
       const apiErr = err instanceof ApiError ? err : null;
       if (apiErr && (apiErr.status >= 500 || apiErr.status === 0)) {
         const clientUuid = uuidv4();
+        const payload = buildPayload();
         await outbox.enqueueCore({
           feature: 'order',
           action: 'create',
           method: 'POST',
           path: '/orders',
-          body: buildPayload(),
+          body: payload,
           clientUuid,
+        });
+        const totalAmount = Object.values(lines).reduce(
+          (sum, line) => sum + line.rateEstimate * line.quantity,
+          0
+        );
+        await localEntities.upsert({
+          clientUuid,
+          feature: 'order',
+          entityType: 'order',
+          display: {
+            _id: `local:${clientUuid}`,
+            clientUuid,
+            status: 'PENDING',
+            pharmacyId: pharmacy ? { _id: pharmacy._id, name: pharmacy.name } : null,
+            distributorId: distributor ? { _id: distributor._id, name: distributor.name } : null,
+            amountAfterPharmacyDiscount: totalAmount,
+            totalAmount,
+            createdAt: new Date().toISOString(),
+            notes: notes.trim() || undefined,
+          },
         });
         toast.show({ tone: 'info', message: 'Saved offline. Will sync.' });
         await flushOutbox();

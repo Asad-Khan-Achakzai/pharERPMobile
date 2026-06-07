@@ -10,8 +10,9 @@
  *     identity key changes and the list rebuilds.
  */
 import * as React from 'react';
-import { View } from 'react-native';
+import { View, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import {
   BellRing,
   Briefcase,
@@ -24,6 +25,10 @@ import {
   Smartphone,
   Target,
   Users,
+  MapPin,
+  Moon,
+  Sun,
+  Monitor,
   Wallet,
 } from 'lucide-react-native';
 import { Screen } from '@/ui/Screen';
@@ -34,6 +39,7 @@ import { Text, H2 } from '@/ui/Text';
 import { Avatar } from '@/ui/Avatar';
 import { Button } from '@/ui/Button';
 import { useAuthStore } from '@/state/authStore';
+import { useTheme, type ThemePreference } from '@/theme/ThemeProvider';
 import { authApi } from '@/api/auth';
 import { OutboxFooter } from '@/features/sync/OutboxFooter';
 import { hasAnyPermission, hasPermission } from '@/auth/rbac';
@@ -104,8 +110,16 @@ const ENTRIES_MANAGER: MoreEntry[] = [
       'attendance.governance.view',
       'weeklyPlans.review',
       'weeklyPlans.approve',
+      'expenses.approve',
       'admin.access',
     ],
+  },
+  {
+    key: 'live',
+    title: 'Live tracking',
+    icon: <MapPin size={18} color="#0f172a" />,
+    route: '/(manager)/live',
+    permissionAny: ['team.view', 'team.viewAllReports', 'attendance.viewTeam', 'admin.access'],
   },
   {
     key: 'team',
@@ -170,6 +184,19 @@ export default function MoreScreen() {
   const router = useRouter();
   const pushWithReturn = usePushWithReturn();
   const { user, company, signOut } = useAuthStore();
+  const { preference, setPreference, colors } = useTheme();
+
+  const themeOptions: { key: ThemePreference; label: string; icon: React.ReactNode }[] = [
+    { key: 'system', label: 'System', icon: <Monitor size={16} color={colors.mutedForeground} /> },
+    { key: 'light', label: 'Light', icon: <Sun size={16} color={colors.mutedForeground} /> },
+    { key: 'dark', label: 'Dark', icon: <Moon size={16} color={colors.mutedForeground} /> },
+  ];
+
+  function onThemeSelect(next: ThemePreference) {
+    if (next === preference) return;
+    void Haptics.selectionAsync();
+    setPreference(next);
+  }
 
   /**
    * Lock the menu shape per session identity. The dependency is `user?._id`
@@ -262,6 +289,51 @@ export default function MoreScreen() {
               {i < utils.length - 1 ? <Divider /> : null}
             </React.Fragment>
           ))}
+        </View>
+      </Card>
+
+      <Card className="mx-4 mt-2" padded={false}>
+        <View className="px-3 py-2">
+          <Text size="xs" tone="muted" weight="medium">
+            Appearance
+          </Text>
+        </View>
+        <Divider />
+        <View className="px-3 py-3 flex-row gap-2">
+          {themeOptions.map((opt) => {
+            const selected = preference === opt.key;
+            return (
+              <Pressable
+                key={opt.key}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                onPress={() => onThemeSelect(opt.key)}
+                style={{
+                  flex: 1,
+                  minHeight: 44,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: selected ? colors.primary : colors.border,
+                  backgroundColor: selected ? colors.primary : colors.muted,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingHorizontal: 8,
+                  paddingVertical: 10,
+                }}
+              >
+                <View className="flex-row items-center">
+                  {opt.icon}
+                  <Text
+                    size="sm"
+                    weight={selected ? 'semibold' : 'medium'}
+                    style={{ marginLeft: 6, color: selected ? colors.primaryForeground : colors.foreground }}
+                  >
+                    {opt.label}
+                  </Text>
+                </View>
+              </Pressable>
+            );
+          })}
         </View>
       </Card>
 

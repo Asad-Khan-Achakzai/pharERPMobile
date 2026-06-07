@@ -19,6 +19,7 @@ import { StickyActionBar } from '@/ui/StickyActionBar';
 import { useToast } from '@/ui/Toast';
 import { PermissionGate } from '@/auth/PermissionGate';
 import { usePermissions } from '@/hooks/usePermissions';
+import { masterQueries } from '@/data/masterQueries';
 import { weeklyPlansApi } from '@/api/weeklyPlans';
 import { reportsApi } from '@/api/reports';
 import { ApiError } from '@/api/client';
@@ -67,7 +68,7 @@ function WeeklyPlanBuilderImpl() {
 
   const planQ = useQuery({
     queryKey: ['plan', id],
-    queryFn: () => weeklyPlansApi.getById(id),
+    queryFn: () => masterQueries.planDetail(id),
   });
   const plan = planQ.data;
 
@@ -246,6 +247,24 @@ function WeeklyPlanBuilderImpl() {
     },
   });
 
+  const [optimizingDay, setOptimizingDay] = React.useState<string | null>(null);
+
+  const optimizeDay = useMutation({
+    mutationFn: (date: string) => weeklyPlansApi.optimizeRoute(id, { date }),
+    onSuccess: () => {
+      toast.show({ tone: 'success', message: 'Route optimized for the day' });
+      invalidate();
+      setOptimizingDay(null);
+    },
+    onError: (e: unknown) => {
+      toast.show({
+        tone: 'danger',
+        message: e instanceof ApiError ? e.message : 'Could not optimize route',
+      });
+      setOptimizingDay(null);
+    },
+  });
+
   const draftHasContent = dayDrafts.some(
     (d) => d.visits.length > 0 || d.otherTasks.some((t) => t.title.trim() !== '')
   );
@@ -401,6 +420,15 @@ function WeeklyPlanBuilderImpl() {
                 })
               }
               onUpdateDraft={(patch) => updateDayDraft(date, patch)}
+              onOptimizeRoute={
+                canEditPlan && savedVisits.length >= 2
+                  ? () => {
+                      setOptimizingDay(date);
+                      optimizeDay.mutate(date);
+                    }
+                  : undefined
+              }
+              optimizing={optimizingDay === date && optimizeDay.isPending}
             />
           );
         })}

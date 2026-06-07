@@ -1,15 +1,19 @@
 import * as React from 'react';
+import { View, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { View } from 'react-native';
+import { FileText } from 'lucide-react-native';
 import { Screen } from '@/ui/Screen';
 import { Header } from '@/ui/Header';
 import { Card } from '@/ui/Card';
 import { Text, H2, Subtitle } from '@/ui/Text';
 import { Badge } from '@/ui/Badge';
+import { Button } from '@/ui/Button';
 import { Divider } from '@/ui/ListRow';
 import { SkeletonRow } from '@/ui/Skeleton';
+import { useToast } from '@/ui/Toast';
 import { ordersApi } from '@/api/orders';
+import type { DeliveryRecord } from '@/domain/types';
 
 const tone: Record<string, 'muted' | 'warning' | 'success' | 'danger' | 'default'> = {
   DRAFT: 'muted',
@@ -31,7 +35,24 @@ function refName(
 
 export default function OrderDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const toast = useToast();
+  const [openingPdf, setOpeningPdf] = React.useState<string | null>(null);
   const q = useQuery({ queryKey: ['order', id], queryFn: () => ordersApi.getById(id) });
+
+  async function openInvoice(delivery: DeliveryRecord) {
+    if (!id) return;
+    setOpeningPdf(delivery._id);
+    try {
+      await ordersApi.openDeliveryInvoice(id, delivery._id);
+    } catch (err: unknown) {
+      toast.show({
+        tone: 'danger',
+        message: (err as Error)?.message ?? 'Could not open invoice',
+      });
+    } finally {
+      setOpeningPdf(null);
+    }
+  }
 
   return (
     <Screen padded={false}>
@@ -97,6 +118,46 @@ export default function OrderDetail() {
               </Text>
             </View>
           </Card>
+          {(q.data.deliveries?.length ?? 0) > 0 ? (
+            <Card className="mx-4 mt-2" padded={false}>
+              <View className="px-3 py-2">
+                <Subtitle>Deliveries</Subtitle>
+              </View>
+              <Divider />
+              {q.data.deliveries!.map((delivery, i, arr) => (
+                <View key={delivery._id}>
+                  <View className="px-3 py-3 flex-row items-center justify-between">
+                    <View className="flex-1 pr-2">
+                      <Text size="sm" weight="medium">
+                        {delivery.invoiceNumber ? `Invoice ${delivery.invoiceNumber}` : 'Delivery'}
+                      </Text>
+                      <Subtitle>
+                        {delivery.deliveredAt
+                          ? new Date(delivery.deliveredAt).toLocaleDateString()
+                          : 'Delivered'}
+                      </Subtitle>
+                    </View>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      loading={openingPdf === delivery._id}
+                      onPress={() => openInvoice(delivery)}
+                      leftIcon={
+                        openingPdf === delivery._id ? (
+                          <ActivityIndicator size="small" />
+                        ) : (
+                          <FileText size={14} color="#2563eb" />
+                        )
+                      }
+                    >
+                      PDF
+                    </Button>
+                  </View>
+                  {i < arr.length - 1 ? <Divider /> : null}
+                </View>
+              ))}
+            </Card>
+          ) : null}
         </>
       )}
     </Screen>

@@ -46,6 +46,7 @@ import { EmptyState } from '@/ui/EmptyState';
 import { useToast } from '@/ui/Toast';
 import { weeklyPlansApi } from '@/api/weeklyPlans';
 import { attendanceRequestsApi } from '@/api/attendanceRequests';
+import { ExpensesApprovalQueue } from '@/features/expenses/ExpensesApprovalQueue';
 import { usePermissions } from '@/hooks/usePermissions';
 import type {
   AttendanceRequest,
@@ -54,7 +55,7 @@ import type {
   WeeklyPlan,
 } from '@/domain/types';
 
-type Segment = 'attendance' | 'plans';
+type Segment = 'attendance' | 'plans' | 'expenses';
 type Scope = 'all' | 'action' | 'monitor';
 
 const REJECT_NOTE_MIN = 10;
@@ -76,6 +77,8 @@ const APPROVE_PERMISSIONS = [
 const GOVERNANCE_PERMISSIONS = ['admin.access', 'attendance.governance.view'];
 
 const PLAN_APPROVE_PERMISSIONS = ['weeklyPlans.review', 'weeklyPlans.approve'];
+
+const EXPENSE_APPROVE_PERMISSIONS = ['expenses.approve', 'admin.access'];
 
 function nameOf(value: unknown): string | null {
   if (!value || typeof value !== 'object') return null;
@@ -99,9 +102,10 @@ export default function Approvals() {
   const canApproveAttendance = canAny(APPROVE_PERMISSIONS);
   const canGovernance = canAny(GOVERNANCE_PERMISSIONS);
   const canApprovePlans = canAny(PLAN_APPROVE_PERMISSIONS);
+  const canApproveExpenses = canAny(EXPENSE_APPROVE_PERMISSIONS);
 
   const [segment, setSegment] = React.useState<Segment>(
-    canApproveAttendance || canGovernance ? 'attendance' : 'plans'
+    canApproveAttendance || canGovernance ? 'attendance' : canApproveExpenses ? 'expenses' : 'plans'
   );
 
   return (
@@ -115,6 +119,7 @@ export default function Approvals() {
           items={[
             { key: 'attendance', label: 'Attendance' },
             { key: 'plans', label: 'Weekly plans' },
+            { key: 'expenses', label: 'Expenses' },
           ]}
         />
       </View>
@@ -143,6 +148,18 @@ export default function Approvals() {
             icon={<ClipboardCheck size={28} color="#94a3b8" />}
             title="No plan approvals"
             description="Your role doesn't review weekly plans."
+          />
+        )
+      ) : null}
+
+      {segment === 'expenses' ? (
+        canApproveExpenses ? (
+          <ExpensesApprovalQueue />
+        ) : (
+          <EmptyState
+            icon={<ClipboardCheck size={28} color="#94a3b8" />}
+            title="No expense approvals"
+            description="Your role cannot approve field expenses."
           />
         )
       ) : null}

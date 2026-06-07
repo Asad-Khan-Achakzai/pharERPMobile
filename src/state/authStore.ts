@@ -2,6 +2,15 @@ import { create } from 'zustand';
 import type { Company, ServerConfig, User } from '@/domain/types';
 import { secureStore } from '@/data/secureStore';
 import { KV_KEYS, getKvJSON, kvStore, setKvJSON } from '@/data/kvStore';
+import { queryClient } from '@/data/queryClient';
+import {
+  clearSessionLocalData,
+  clearStoredSessionOwner,
+  clearUserScopedCache,
+  ensureSessionIsolation,
+  setStoredSessionOwner,
+} from '@/data/sessionLocalData';
+import { resetSyncStatusAfterSessionChange } from '@/data/syncEngine';
 
 interface AuthState {
   bootstrapped: boolean;
@@ -23,7 +32,7 @@ interface AuthState {
   signOut(): Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   bootstrapped: false,
   user: null,
   company: null,
@@ -47,9 +56,21 @@ export const useAuthStore = create<AuthState>((set) => ({
       serverConfig,
       bootstrapped: true,
     });
+    if (user?._id && company?._id) {
+      const cleared = await ensureSessionIsolation(String(user._id), String(company._id));
+      await setStoredSessionOwner(String(user._id), String(company._id));
+      if (cleared) {
+        queryClient.clear();
+        await resetSyncStatusAfterSessionChange();
+      }
+    }
   },
 
   async setSession({ user, company, accessToken, refreshToken }) {
+    const cleared = await ensureSessionIsolation(String(user._id), String(company._id));
+    if (cleared) {
+      queryClient.clear();
+    }
     await Promise.all([
       secureStore.set('accessToken', accessToken),
       secureStore.set('refreshToken', refreshToken),
@@ -57,6 +78,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       setKvJSON(KV_KEYS.company, company),
     ]);
     set({ user, company, accessToken, refreshToken });
+    await setStoredSessionOwner(String(user._id), String(company._id));
+    await resetSyncStatusAfterSessionChange();
   },
 
   async setTokens({ accessToken, refreshToken }) {
@@ -73,6 +96,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   async signOut() {
+    const { user } = get();
+    if (user?._id) {
+      await clearUserScopedCache(String(user._id));
+    }
+    await clearSessionLocalData();
+    await clearStoredSessionOwner();
     await Promise.all([
       secureStore.clearSession(),
       kvStore.removeMany([KV_KEYS.user, KV_KEYS.company, KV_KEYS.serverConfig]),
@@ -84,6 +113,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       refreshToken: null,
       serverConfig: null,
     });
+    queryClient.clear();
+    await resetSyncStatusAfterSessionChange();
   },
 }));
 

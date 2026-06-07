@@ -1,4 +1,6 @@
 import { api, unwrap } from './client';
+import * as FileSystem from 'expo-file-system/legacy';
+import { Share } from 'react-native';
 import type { ID, Order } from '@/domain/types';
 
 /**
@@ -68,5 +70,28 @@ export const ordersApi = {
       headers: clientUuid ? { 'X-Client-Uuid': clientUuid } : undefined,
     });
     return unwrap<Order>(resp);
+  },
+
+  async openDeliveryInvoice(orderId: ID, deliveryId: ID): Promise<void> {
+    const resp = await api.get(`/orders/${orderId}/deliveries/${deliveryId}/invoice`, {
+      responseType: 'arraybuffer',
+    });
+    const bytes = new Uint8Array(resp.data as ArrayBuffer);
+    let binary = '';
+    const chunk = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunk) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+    }
+    const base64 =
+      typeof globalThis.btoa === 'function'
+        ? globalThis.btoa(binary)
+        : (() => {
+            throw new Error('PDF encoding is unavailable on this device');
+          })();
+    const path = `${FileSystem.cacheDirectory}invoice-${deliveryId}.pdf`;
+    await FileSystem.writeAsStringAsync(path, base64, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    await Share.share({ url: path, title: 'Delivery invoice' });
   },
 };

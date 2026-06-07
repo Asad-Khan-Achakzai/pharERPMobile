@@ -25,6 +25,7 @@ import { Switch } from '@/ui/Switch';
 import { SkeletonRow } from '@/ui/Skeleton';
 import { StickyActionBar } from '@/ui/StickyActionBar';
 import { useToast } from '@/ui/Toast';
+import { masterQueries } from '@/data/masterQueries';
 import { doctorsApi } from '@/api/doctors';
 import { PermissionGate } from '@/auth/PermissionGate';
 import type { Doctor } from '@/domain/types';
@@ -120,7 +121,7 @@ function EditDoctorImpl() {
   const qc = useQueryClient();
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  const q = useQuery({ queryKey: ['doctor', id], queryFn: () => doctorsApi.getById(id) });
+  const q = useQuery({ queryKey: ['doctor', id], queryFn: () => masterQueries.doctorById(id) });
 
   const [initial, setInitial] = React.useState<DoctorDraft | null>(null);
   const [draft, setDraft] = React.useState<DoctorDraft | null>(null);

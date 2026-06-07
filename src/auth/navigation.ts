@@ -24,7 +24,7 @@ export const FIELD_SHELL = '/(tabs)' as const;
 export const MANAGER_GROUP = '(manager)' as const;
 
 /** Leaf routes inside `(manager)` that may be opened from the field shell. */
-export const MANAGER_STACK_LEAVES = new Set(['approvals', 'attendance', 'index']);
+export const MANAGER_STACK_LEAVES = new Set(['approvals', 'attendance', 'live', 'index']);
 
 const APPROVAL_PERMISSIONS = SCREEN_PERMISSIONS.manager_approvals!.anyOf;
 const TEAM_PERMISSIONS = SCREEN_PERMISSIONS.manager_home!.anyOf;
@@ -92,6 +92,7 @@ export function canOpenManagerLeaf(
   if (!leaf || !MANAGER_STACK_LEAVES.has(leaf)) return false;
   if (leaf === 'approvals') return canSeeScreen(user, 'manager_approvals');
   if (leaf === 'attendance') return canSeeScreen(user, 'manager_attendance');
+  if (leaf === 'live') return canSeeScreen(user, 'manager_live');
   /** `(manager)/index` — team overview dashboard. */
   if (leaf === 'index') return canSeeScreen(user, 'manager_home');
   return false;

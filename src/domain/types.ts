@@ -373,7 +373,18 @@ export interface Attendance {
   /** Client-only conveniences (not persisted yet on the Attendance model). */
   lat?: number;
   lng?: number;
+  checkInLat?: number;
+  checkInLng?: number;
+  checkInAccuracy?: number | null;
+  checkOutLat?: number;
+  checkOutLng?: number;
+  checkOutAccuracy?: number | null;
   selfieMediaId?: ID | null;
+  /** Client-only: offline shadow / sync visibility (Phase 2+). */
+  _localPending?: boolean;
+  _pendingCheckIn?: boolean;
+  _pendingCheckOut?: boolean;
+  _syncState?: 'synced' | 'pending' | 'failed';
 }
 
 export interface WeeklyPlan {
@@ -435,6 +446,7 @@ export interface Order {
   visitLogId?: ID | null;
   notes?: string;
   createdAt?: ISO;
+  deliveries?: DeliveryRecord[];
 }
 
 export interface OrderItem {
@@ -469,6 +481,8 @@ export type ExpenseCategory =
   | 'OFFICE'
   | 'OTHER';
 
+export type ExpenseStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
 export interface Expense {
   _id: ID;
   companyId?: ID;
@@ -478,8 +492,10 @@ export interface Expense {
   date: ISO;
   distributorId?: ID | null;
   doctorId?: ID | null;
-  employeeId?: ID | null;
-  approvedBy?: ID | null;
+  employeeId?: ID | null | { _id?: ID; name?: string };
+  approvedBy?: ID | null | { _id?: ID; name?: string };
+  status?: ExpenseStatus;
+  rejectionReason?: string | null;
   createdBy?: ID | null;
   createdAt?: ISO;
 }
@@ -547,11 +563,44 @@ export interface ServerConfig {
     pageSize: number;
     pollIntervalMs: number;
   };
+  push?: {
+    enabled: boolean;
+  };
+  liveTracking?: {
+    enabled: boolean;
+    maxAccuracyMeters?: number;
+    heartbeatIntervalMs?: number;
+  };
+  expenses?: {
+    approvalRequired: boolean;
+  };
   company: {
     id: ID;
     status: Company['status'];
     name: string;
+    mobilePushEnabled?: boolean;
+    liveTrackingEnabled?: boolean;
+    expenseApprovalRequired?: boolean;
   };
+}
+
+export interface DeliveryRecord {
+  _id: ID;
+  orderId?: ID;
+  invoiceNumber?: string;
+  deliveredAt?: ISO;
+  deliveredBy?: ID | { _id?: ID; name?: string };
+  status?: string;
+}
+
+export interface LiveRepLocation {
+  userId: ID;
+  name: string;
+  lat: number | null;
+  lng: number | null;
+  accuracy?: number | null;
+  capturedAt: ISO | null;
+  ageSeconds: number | null;
 }
 
 export interface DeviceSession {

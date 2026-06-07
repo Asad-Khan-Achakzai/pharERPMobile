@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { doctorsApi } from '@/api/doctors';
-import { territoriesApi } from '@/api/territories';
+import { masterQueries } from '@/data/masterQueries';
+import type { TerritoryTreeResponse } from '@/api/territories';
 import type { Doctor, ID, User } from '@/domain/types';
 import {
   idOf,
@@ -56,12 +56,12 @@ async function prefetchRecommendedDoctors(
   userId: string,
   brickIdSet: Set<string>,
   anchorId: string | null,
-  roots: Awaited<ReturnType<typeof territoriesApi.tree>>['roots']
+  roots: TerritoryTreeResponse['roots']
 ): Promise<Doctor[]> {
   const batches: Promise<Doctor[]>[] = [];
 
   batches.push(
-    doctorsApi.lookup({
+    masterQueries.doctorsLookup({
       assignedRepId: userId,
       isActive: 'true',
       limit: LOOKUP_PREFETCH_LIMIT,
@@ -74,7 +74,7 @@ async function prefetchRecommendedDoctors(
 
   if (anchorId) {
     batches.push(
-      doctorsApi.lookup({
+      masterQueries.doctorsLookup({
         underTerritoryId: anchorId,
         isActive: 'true',
         limit: LOOKUP_PREFETCH_LIMIT,
@@ -86,7 +86,7 @@ async function prefetchRecommendedDoctors(
     for (const brickId of brickIdSet) {
       if (brickId === anchorId) continue;
       batches.push(
-        doctorsApi.lookup({
+        masterQueries.doctorsLookup({
           territoryId: brickId,
           isActive: 'true',
           limit: LOOKUP_PREFETCH_LIMIT,
@@ -116,7 +116,7 @@ export function useRecommendedDoctors(
 
   const treeQ = useQuery({
     queryKey: ['territories', 'tree'],
-    queryFn: () => territoriesApi.tree(),
+    queryFn: () => masterQueries.territoriesTree(),
     staleTime: PREFETCH_STALE_MS,
     enabled,
   });

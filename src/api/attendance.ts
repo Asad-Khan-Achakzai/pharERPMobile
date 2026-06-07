@@ -4,26 +4,53 @@ import type { Attendance } from '@/domain/types';
 /**
  * Attendance mobile client — matches backend `attendance.routes.js`
  * and validators in `pharmaERPBackend/src/validators/attendance.validator.js`.
- *
- *  - `meToday()` returns the augmented attendance doc with `canCheckIn`,
- *    `canCheckOut`, `uiStatus`, `policySummary`, etc.
- *  - `checkIn({ reason })` mirrors `checkinBodySchema`. Lat/lng are accepted
- *    by the controller but not persisted today; we still send them so they
- *    light up once backend support lands without a mobile change.
- *  - `checkOut()` takes no body (no validator).
  */
 export interface CheckInInput {
   reason?: string;
+  notes?: string;
   lat?: number;
   lng?: number;
+  accuracy?: number | null;
+  /** Device time when the rep tapped check-in (preserved through offline sync). */
+  capturedAt?: string;
   clientUuid?: string;
 }
 
 export interface CheckOutInput {
+  notes?: string;
+  lat?: number;
+  lng?: number;
+  accuracy?: number | null;
+  capturedAt?: string;
   clientUuid?: string;
 }
 
+export interface TeamTodayBoard {
+  businessDate?: string;
+  employees?: Array<{
+    employeeId: string;
+    name: string;
+    status: string;
+  }>;
+  summary?: {
+    presentPayroll?: number;
+    present?: number;
+    notMarked?: number;
+    absent?: number;
+    pendingLateApproval?: number;
+    totalEmployees?: number;
+  };
+}
+
 export const attendanceApi = {
+  async teamToday(): Promise<TeamTodayBoard | null> {
+    try {
+      const resp = await api.get('/attendance/today');
+      return unwrap<TeamTodayBoard>(resp);
+    } catch {
+      return null;
+    }
+  },
   async meToday(): Promise<Attendance | null> {
     try {
       const resp = await api.get('/attendance/me/today');
@@ -33,22 +60,58 @@ export const attendanceApi = {
     }
   },
   async checkIn(input: CheckInInput = {}): Promise<Attendance> {
-    const { clientUuid, reason, lat, lng } = input;
+    const { clientUuid, reason, notes, lat, lng, accuracy, capturedAt } = input;
     const body: Record<string, unknown> = {};
     if (reason) body.reason = reason;
+    if (notes) body.notes = notes;
     if (lat != null) body.lat = lat;
     if (lng != null) body.lng = lng;
+    if (accuracy != null) body.accuracy = accuracy;
+    if (capturedAt) body.capturedAt = capturedAt;
     const resp = await api.post('/attendance/checkin', body, {
       headers: clientUuid ? { 'X-Client-Uuid': clientUuid } : undefined,
     });
     return unwrap<Attendance>(resp);
   },
   async checkOut(input: CheckOutInput = {}): Promise<Attendance> {
-    const resp = await api.post(
-      '/attendance/checkout',
-      {},
-      { headers: input.clientUuid ? { 'X-Client-Uuid': input.clientUuid } : undefined }
-    );
+    const { clientUuid, notes, lat, lng, accuracy, capturedAt } = input;
+    const body: Record<string, unknown> = {};
+    if (notes) body.notes = notes;
+    if (lat != null) body.lat = lat;
+    if (lng != null) body.lng = lng;
+    if (accuracy != null) body.accuracy = accuracy;
+    if (capturedAt) body.capturedAt = capturedAt;
+    const resp = await api.post('/attendance/checkout', body, {
+      headers: clientUuid ? { 'X-Client-Uuid': clientUuid } : undefined,
+    });
     return unwrap<Attendance>(resp);
+  },
+
+  /** Updates notes on today's open attendance (`POST /attendance/mark`). */
+  async updateNotes(notes: string): Promise<Attendance> {
+    const resp = await api.post('/attendance/mark', { notes });
+    return unwrap<Attendance>(resp);
+  },
+
+  async heartbeat(input: {
+    lat: number;
+    lng: number;
+    accuracy?: number | null;
+    capturedAt?: string;
+    clientUuid?: string;
+  }): Promise<void> {
+    const { clientUuid, ...body } = input;
+    await api.post('/attendance/heartbeat', body, {
+      headers: clientUuid ? { 'X-Client-Uuid': clientUuid } : undefined,
+    });
+  },
+
+  async live(): Promise<import('@/domain/types').LiveRepLocation[]> {
+    try {
+      const resp = await api.get('/attendance/live');
+      return unwrap<import('@/domain/types').LiveRepLocation[]>(resp);
+    } catch {
+      return [];
+    }
   },
 };

@@ -38,7 +38,7 @@ export const OutboxFooter: React.FC = () => {
           </Text>
         </View>
       </View>
-      <Pressable onPress={() => forceSync()} hitSlop={10}>
+      <Pressable onPress={() => void forceSync()} hitSlop={10}>
         <RefreshCw size={18} color="#fff" />
       </Pressable>
     </Pressable>

@@ -14,8 +14,10 @@ export interface NotificationItem {
 export const notificationsApi = {
   async feed(): Promise<NotificationItem[]> {
     try {
-      const resp = await api.get('/notifications/feed');
-      return unwrap<NotificationItem[]>(resp);
+      const resp = await api.get('/notifications/feed', { params: { limit: 50 } });
+      const data = resp.data;
+      const rows = data.data ?? data;
+      return Array.isArray(rows) ? rows : [];
     } catch {
       return [];
     }

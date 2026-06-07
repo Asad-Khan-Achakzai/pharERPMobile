@@ -16,6 +16,7 @@ import { SkeletonRow } from '@/ui/Skeleton';
 import { StickyActionBar } from '@/ui/StickyActionBar';
 import { AttachReceiptButton } from '@/ui/media/AttachReceiptButton';
 import { useToast } from '@/ui/Toast';
+import { masterQueries } from '@/data/masterQueries';
 import { pharmaciesApi } from '@/api/pharmacies';
 import { collectionsApi } from '@/api/expenses';
 import { ApiError } from '@/api/client';
@@ -38,7 +39,7 @@ export default function PharmacyProfile() {
   const { canDo } = usePermissions();
   const canCollect = canDo('collection_create');
   const { id } = useLocalSearchParams<{ id: string }>();
-  const q = useQuery({ queryKey: ['pharmacy', id], queryFn: () => pharmaciesApi.getById(id) });
+  const q = useQuery({ queryKey: ['pharmacy', id], queryFn: () => masterQueries.pharmacyById(id) });
   const fin = useQuery({
     queryKey: ['pharmacy', id, 'financials'],
     queryFn: () => pharmaciesApi.financials(id),

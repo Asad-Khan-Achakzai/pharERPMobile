@@ -56,6 +56,26 @@ export const semantic = {
   ring: palette.primary[600],
 } as const;
 
+export const semanticDark = {
+  background: palette.slate[900],
+  foreground: palette.slate[50],
+  card: palette.slate[800],
+  cardForeground: palette.slate[50],
+  border: palette.slate[700],
+  input: palette.slate[700],
+  inputBackground: palette.slate[800],
+  muted: palette.slate[800],
+  mutedForeground: palette.slate[400],
+  primary: palette.primary[400],
+  primaryForeground: palette.slate[900],
+  secondary: palette.slate[800],
+  secondaryForeground: palette.slate[50],
+  destructive: palette.destructive,
+  success: palette.success,
+  warning: palette.warning,
+  ring: palette.primary[400],
+} as const;
+
 export const radii = {
   none: 0,
   sm: 4,

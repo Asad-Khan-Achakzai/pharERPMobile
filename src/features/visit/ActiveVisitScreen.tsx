@@ -21,7 +21,6 @@ import { View, ScrollView } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
-import * as Location from 'expo-location';
 import { intervalToDuration } from 'date-fns';
 import {
   ClipboardList,
@@ -50,20 +49,12 @@ import { NumberStepper } from '@/ui/NumberStepper';
 import { useToast } from '@/ui/Toast';
 import { AddPhotoButton } from '@/ui/media/AddPhotoButton';
 import { ProductVisualViewer } from '@/ui/media/ProductVisualViewer';
-import {
-  planItemsApi,
-  visitsApi,
-  type MarkVisitInput,
-  type UnplannedVisitInput,
-} from '@/api/planItems';
-import { doctorsApi } from '@/api/doctors';
-import { productsApi } from '@/api/products';
+import { masterQueries } from '@/data/masterQueries';
 import { ApiError } from '@/api/client';
 import { useFlags } from '@/hooks/useFlags';
-import { outbox } from '@/data/outbox';
+import { visitOffline } from '@/data/visitOffline';
 import { getDb } from '@/data/db';
 import type { Doctor, ID, PlanItem, Product } from '@/domain/types';
-import { flushOutbox } from '@/data/syncEngine';
 
 type Mode = 'planned' | 'unplanned';
 
@@ -134,12 +125,12 @@ export const ActiveVisitScreen: React.FC<ActiveVisitScreenProps> = ({
   const doctor = useQuery({
     queryKey: ['doctor', targetDoctorId],
     enabled: !!targetDoctorId,
-    queryFn: () => doctorsApi.getById(targetDoctorId!),
+    queryFn: () => masterQueries.doctorById(targetDoctorId!),
   });
 
   const products = useQuery({
     queryKey: ['products', 'list'],
-    queryFn: () => productsApi.list(),
+    queryFn: () => masterQueries.productsList(),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -270,43 +261,30 @@ export const ActiveVisitScreen: React.FC<ActiveVisitScreenProps> = ({
 
   const complete = useMutation({
     mutationFn: async () => {
-      let location: { lat: number; lng: number } | undefined;
-      if (flags.attendanceGeofenceEnabled) {
-        try {
-          const { status } = await Location.requestForegroundPermissionsAsync();
-          if (status === 'granted') {
-            const pos = await Location.getCurrentPositionAsync({
-              accuracy: Location.Accuracy.Balanced,
-            });
-            location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          }
-        } catch {
-          /* location optional */
-        }
-      }
       const base = buildBaseBody();
-      if (mode === 'planned' && planItem?._id) {
-        const input: MarkVisitInput = {
-          ...base,
-          location,
-          clientUuid,
-          outOfOrderReason: isOutOfSequence ? outOfOrderReason.trim() : undefined,
-        };
-        return planItemsApi.markVisit(planItem._id, input);
+      const body: Record<string, unknown> = { ...base };
+      if (mode === 'planned' && isOutOfSequence) {
+        body.outOfOrderReason = outOfOrderReason.trim();
       }
-      const input: UnplannedVisitInput = {
-        ...base,
-        location,
+      const result = await visitOffline.submit({
+        mode,
+        planItem: mode === 'planned' ? planItem : undefined,
+        doctor: doctor.data ?? null,
+        doctorId: targetDoctorId ?? undefined,
+        unplannedReason: mode === 'unplanned' ? unplannedReason : undefined,
+        startedAt,
+        body,
         clientUuid,
-        doctorId: targetDoctorId!,
-        unplannedReason,
-      };
-      return visitsApi.unplanned(input);
+      });
+      return result;
     },
-    onSuccess: async () => {
+    onSuccess: async (result) => {
       const db = await getDb();
       await db.runAsync(`DELETE FROM visit_drafts WHERE client_uuid = ?`, [clientUuid]);
-      toast.show({ tone: 'success', message: 'Visit recorded' });
+      toast.show({
+        tone: result.queued ? 'info' : 'success',
+        message: result.queued ? 'Visit saved offline — will sync automatically' : 'Visit recorded',
+      });
       qc.invalidateQueries({ queryKey: ['plan-items', 'today'] });
       qc.invalidateQueries({ queryKey: ['dashboard', 'home'] });
       goBack();
@@ -319,35 +297,6 @@ export const ActiveVisitScreen: React.FC<ActiveVisitScreenProps> = ({
           title: 'Visit already marked missed',
           message: 'Convert to unplanned visit?',
         });
-        return;
-      }
-      if (apiErr && (apiErr.status >= 500 || apiErr.status === 0 || apiErr.status === 408)) {
-        const path =
-          mode === 'planned' && planItem?._id
-            ? `/plan-items/${planItem._id}/mark-visit`
-            : `/visits/unplanned`;
-        const base = buildBaseBody();
-        const body: Record<string, unknown> = { ...base };
-        if (mode === 'planned' && isOutOfSequence) {
-          body.outOfOrderReason = outOfOrderReason.trim();
-        }
-        if (mode === 'unplanned') {
-          body.doctorId = targetDoctorId;
-          body.unplannedReason = unplannedReason;
-        }
-        await outbox.enqueueCore({
-          feature: 'visit',
-          action: mode === 'planned' ? 'mark-visit' : 'unplanned-visit',
-          method: 'POST',
-          path,
-          body,
-          clientUuid,
-        });
-        toast.show({ tone: 'info', message: 'Saved offline — will sync automatically' });
-        const db = await getDb();
-        await db.runAsync(`DELETE FROM visit_drafts WHERE client_uuid = ?`, [clientUuid]);
-        await flushOutbox();
-        goBack();
         return;
       }
       const message = (err as { message?: string })?.message;

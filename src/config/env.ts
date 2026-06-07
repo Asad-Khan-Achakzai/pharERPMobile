@@ -28,7 +28,7 @@ export const env = {
   apiBaseUrl:
     // extra.apiBaseUrl ??
     // process.env.EXPO_PUBLIC_API_BASE_URL ??
-    'http://192.168.100.254:5001',
+    'http://192.168.100.247:5001',
   apiVersion: extra.apiVersion ?? process.env.EXPO_PUBLIC_API_VERSION ?? 'v1',
   sentryDsn: extra.sentryDsn ?? process.env.EXPO_PUBLIC_SENTRY_DSN,
   buildChannel:

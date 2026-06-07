@@ -33,6 +33,7 @@ import { expensesApi } from '@/api/expenses';
 import { PermissionGate } from '@/auth/PermissionGate';
 import { ApiError } from '@/api/client';
 import { outbox } from '@/data/outbox';
+import { localEntities } from '@/data/localEntities';
 import { flushOutbox } from '@/data/syncEngine';
 import type { ExpenseCategory } from '@/domain/types';
 
@@ -77,13 +78,29 @@ function NewExpenseImpl() {
     onError: async (err: unknown) => {
       const apiErr = err instanceof ApiError ? err : null;
       if (apiErr && (apiErr.status >= 500 || apiErr.status === 0)) {
+        const clientUuid = uuidv4();
+        const body = buildBody();
         await outbox.enqueueCore({
           feature: 'expense',
           action: 'create',
           method: 'POST',
           path: '/expenses',
-          body: buildBody(),
-          clientUuid: uuidv4(),
+          body,
+          clientUuid,
+        });
+        await localEntities.upsert({
+          clientUuid,
+          feature: 'expense',
+          entityType: 'expense',
+          display: {
+            _id: `local:${clientUuid}`,
+            clientUuid,
+            category: body.category,
+            amount: body.amount,
+            date: body.date,
+            description: body.description,
+            status: 'APPROVED',
+          },
         });
         toast.show({ tone: 'info', message: 'Saved offline. Will sync.' });
         await flushOutbox();

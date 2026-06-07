@@ -13,6 +13,7 @@ import { Button } from '@/ui/Button';
 import { ListRow, Divider } from '@/ui/ListRow';
 import { SkeletonRow } from '@/ui/Skeleton';
 import { StickyActionBar } from '@/ui/StickyActionBar';
+import { masterQueries } from '@/data/masterQueries';
 import { doctorsApi } from '@/api/doctors';
 import { usePermissions } from '@/hooks/usePermissions';
 import { usePushWithReturn } from '@/navigation/usePushWithReturn';
@@ -21,7 +22,7 @@ export default function DoctorProfile() {
   const pushWithReturn = usePushWithReturn();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { can } = usePermissions();
-  const q = useQuery({ queryKey: ['doctor', id], queryFn: () => doctorsApi.getById(id) });
+  const q = useQuery({ queryKey: ['doctor', id], queryFn: () => masterQueries.doctorById(id) });
   const visits = useQuery({
     queryKey: ['doctor', id, 'visits'],
     queryFn: () => doctorsApi.visitHistory(id),

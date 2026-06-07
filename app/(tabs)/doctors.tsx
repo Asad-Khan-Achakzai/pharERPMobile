@@ -12,7 +12,7 @@ import { Badge } from '@/ui/Badge';
 import { SkeletonRow } from '@/ui/Skeleton';
 import { EmptyState } from '@/ui/EmptyState';
 import { FAB } from '@/ui/FAB';
-import { doctorsApi } from '@/api/doctors';
+import { masterQueries } from '@/data/masterQueries';
 import { usePermissions } from '@/hooks/usePermissions';
 import { usePushWithReturn } from '@/navigation/usePushWithReturn';
 
@@ -24,7 +24,7 @@ export default function DoctorsScreen() {
 
   const list = useQuery({
     queryKey: ['doctors', q.trim()],
-    queryFn: () => doctorsApi.list({ search: q.trim() || undefined, limit: 50 }),
+    queryFn: () => masterQueries.doctorsList({ search: q.trim() || undefined, limit: 50 }),
     placeholderData: (prev) => prev,
   });
 

@@ -9,7 +9,7 @@ import { Badge } from '@/ui/Badge';
 import { PressableCard } from '@/ui/Card';
 import { Button } from '@/ui/Button';
 import { SkeletonRow } from '@/ui/Skeleton';
-import { doctorsApi } from '@/api/doctors';
+import { masterQueries } from '@/data/masterQueries';
 import { useRecommendedDoctors } from '@/hooks/useRecommendedDoctors';
 import { useAuthStore } from '@/state/authStore';
 import type { Doctor, User } from '@/domain/types';
@@ -93,7 +93,7 @@ export const DoctorPickerSheet: React.FC<DoctorPickerSheetProps> = ({
   const lookupQ = useQuery({
     queryKey: ['doctors', 'lookup', 'plan-picker', q],
     enabled: open && searchEnabled,
-    queryFn: () => doctorsApi.lookup({ search: q.trim(), isActive: 'true', limit: 30 }),
+    queryFn: () => masterQueries.doctorsLookup({ search: q.trim(), isActive: 'true', limit: 30 }),
   });
 
   const { recommended: searchRec, others: searchOthers } = React.useMemo(() => {

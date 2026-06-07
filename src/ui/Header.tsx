@@ -6,6 +6,7 @@ import { Text } from './Text';
 import { TopInsetConsumedContext } from './topInsetContext';
 import { cn } from '@/utils/cn';
 import { useAppBack } from '@/navigation/useAppBack';
+import { useTheme } from '@/theme/ThemeProvider';
 
 interface HeaderProps {
   title?: string;
@@ -33,6 +34,7 @@ export const Header: React.FC<HeaderProps> = ({
   insideSafeArea,
 }) => {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const topConsumedByParent = React.useContext(TopInsetConsumedContext);
   const appBack = useAppBack();
 
@@ -52,11 +54,13 @@ export const Header: React.FC<HeaderProps> = ({
   const topPad = consumed ? 0 : insets.top;
   return (
     <View
-      style={{ paddingTop: topPad }}
-      className={cn(
-        'flex-row items-center px-2 py-3 bg-background border-b border-border',
-        className,
-      )}
+      style={{
+        paddingTop: topPad,
+        backgroundColor: colors.background,
+        borderBottomColor: colors.border,
+        borderBottomWidth: 1,
+      }}
+      className={cn('flex-row items-center px-2 py-3', className)}
     >
       {back ? (
         <Pressable
@@ -65,7 +69,7 @@ export const Header: React.FC<HeaderProps> = ({
           hitSlop={12}
           className="h-10 w-10 items-center justify-center"
         >
-          <ChevronLeft size={22} color="#0f172a" />
+          <ChevronLeft size={22} color={colors.foreground} />
         </Pressable>
       ) : (
         <View className="w-2" />

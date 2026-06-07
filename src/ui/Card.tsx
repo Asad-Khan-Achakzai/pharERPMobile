@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { View, ViewProps, Pressable, PressableProps } from 'react-native';
 import { cn } from '@/utils/cn';
+import { useTheme } from '@/theme/ThemeProvider';
 
 interface CardProps extends ViewProps {
   className?: string;
@@ -12,18 +13,18 @@ export const Card: React.FC<CardProps> = ({
   className,
   padded = true,
   elevated = false,
+  style,
   ...rest
-}) => (
-  <View
-    {...rest}
-    className={cn(
-      'rounded-2xl bg-card border border-border',
-      padded && 'p-4',
-      elevated && 'shadow-md',
-      className,
-    )}
-  />
-);
+}) => {
+  const { colors } = useTheme();
+  return (
+    <View
+      {...rest}
+      style={[{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }, style]}
+      className={cn('rounded-2xl', padded && 'p-4', elevated && 'shadow-md', className)}
+    />
+  );
+};
 
 interface PressableCardProps extends PressableProps {
   className?: string;
@@ -35,19 +36,19 @@ export const PressableCard: React.FC<PressableCardProps> = ({
   className,
   padded = true,
   elevated = false,
+  style,
   ...rest
-}) => (
-  <Pressable
-    {...rest}
-    android_ripple={{ color: '#e2e8f0' }}
-    className={cn(
-      'rounded-2xl bg-card border border-border active:bg-muted',
-      padded && 'p-4',
-      elevated && 'shadow-md',
-      className,
-    )}
-  />
-);
+}) => {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      {...rest}
+      android_ripple={{ color: colors.border }}
+      style={[{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }, style]}
+      className={cn('rounded-2xl active:opacity-90', padded && 'p-4', elevated && 'shadow-md', className)}
+    />
+  );
+};
 
 export const CardHeader: React.FC<ViewProps & { className?: string }> = ({
   className,

@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TopInsetConsumedContext } from './topInsetContext';
 import { cn } from '@/utils/cn';
+import { useTheme } from '@/theme/ThemeProvider';
 
 interface ScreenProps {
   children: React.ReactNode;
@@ -40,7 +41,7 @@ export const Screen: React.FC<ScreenProps> = ({
   scrollProps,
   testID,
 }) => {
-  const surfaceClass = background === 'muted' ? 'bg-muted' : 'bg-background';
+  const { colors } = useTheme();
   const contentClass = cn(padded && 'px-4', 'pb-8', contentClassName);
 
   const inner = scroll ? (
@@ -72,10 +73,12 @@ export const Screen: React.FC<ScreenProps> = ({
   );
 
   const topConsumed = edges.includes('top');
+  const surfaceColor = background === 'muted' ? colors.muted : colors.background;
   return (
     <SafeAreaView
       edges={edges}
-      className={cn('flex-1', surfaceClass, className)}
+      style={{ flex: 1, backgroundColor: surfaceColor }}
+      className={cn(className)}
       testID={testID}
     >
       <TopInsetConsumedContext.Provider value={topConsumed}>

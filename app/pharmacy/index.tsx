@@ -11,7 +11,7 @@ import { Badge } from '@/ui/Badge';
 import { Button } from '@/ui/Button';
 import { SkeletonRow } from '@/ui/Skeleton';
 import { EmptyState } from '@/ui/EmptyState';
-import { pharmaciesApi } from '@/api/pharmacies';
+import { masterQueries } from '@/data/masterQueries';
 import { usePermissions } from '@/hooks/usePermissions';
 import { PermissionGate } from '@/auth/PermissionGate';
 import { usePushWithReturn } from '@/navigation/usePushWithReturn';
@@ -22,7 +22,7 @@ function PharmaciesScreenImpl() {
   const [q, setQ] = React.useState('');
   const list = useQuery({
     queryKey: ['pharmacies', q.trim()],
-    queryFn: () => pharmaciesApi.list({ search: q.trim() || undefined, limit: 50 }),
+    queryFn: () => masterQueries.pharmaciesList({ search: q.trim() || undefined, limit: 50 }),
     placeholderData: (prev) => prev,
   });
 

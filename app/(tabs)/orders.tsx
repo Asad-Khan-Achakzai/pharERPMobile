@@ -13,7 +13,9 @@ import { Button } from '@/ui/Button';
 import { SkeletonRow } from '@/ui/Skeleton';
 import { EmptyState } from '@/ui/EmptyState';
 import { FAB } from '@/ui/FAB';
-import { ordersApi } from '@/api/orders';
+import { ordersQueries } from '@/data/ordersQueries';
+import { SyncStatusBadge } from '@/ui/SyncStatusBadge';
+import type { SyncUiState } from '@/data/localEntities';
 import { usePermissions } from '@/hooks/usePermissions';
 import { usePushWithReturn } from '@/navigation/usePushWithReturn';
 import {
@@ -72,7 +74,7 @@ export default function OrdersScreen() {
     queryKey: ['orders', 'list', debouncedSearch, filters, canFilterByRep],
     initialPageParam: 1,
     queryFn: ({ pageParam }) =>
-      ordersApi.list({
+      ordersQueries.list({
         page: pageParam,
         limit: PAGE_SIZE,
         search: debouncedSearch || undefined,
@@ -184,6 +186,10 @@ export default function OrdersScreen() {
                     <Badge tone={statusTone[item.status] ?? 'default'} className="mt-1">
                       {item.status}
                     </Badge>
+                    <SyncStatusBadge
+                      state={(item as { _syncState?: SyncUiState })._syncState}
+                      className="mt-1"
+                    />
                   </View>
                 </View>
               </PressableCard>

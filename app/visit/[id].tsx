@@ -2,8 +2,9 @@ import * as React from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { View } from 'react-native';
+import { PermissionGate } from '@/auth/PermissionGate';
 import { ActiveVisitScreen } from '@/features/visit/ActiveVisitScreen';
-import { planItemsApi } from '@/api/planItems';
+import { masterQueries } from '@/data/masterQueries';
 import { Screen } from '@/ui/Screen';
 import { SkeletonRow } from '@/ui/Skeleton';
 
@@ -11,7 +12,7 @@ export default function VisitScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const today = useQuery({
     queryKey: ['plan-items', 'today'],
-    queryFn: () => planItemsApi.listToday(),
+    queryFn: () => masterQueries.planItemsToday(),
   });
   const item = today.data?.items.find((p) => p._id === id);
   if (today.isLoading || !item) {
@@ -23,11 +24,13 @@ export default function VisitScreen() {
   }
   return (
     <View className="flex-1">
-      <ActiveVisitScreen
-        mode="planned"
-        planItem={item}
-        nextPendingPlanItemId={today.data?.nextPlanItem?._id ?? null}
-      />
+      <PermissionGate screen="visit_active" title="Visit">
+        <ActiveVisitScreen
+          mode="planned"
+          planItem={item}
+          nextPendingPlanItemId={today.data?.nextPlanItem?._id ?? null}
+        />
+      </PermissionGate>
     </View>
   );
 }

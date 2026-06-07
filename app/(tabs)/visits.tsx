@@ -12,9 +12,12 @@ import { Badge } from '@/ui/Badge';
 import { FAB } from '@/ui/FAB';
 import { SkeletonRow } from '@/ui/Skeleton';
 import { EmptyState } from '@/ui/EmptyState';
-import { planItemsApi } from '@/api/planItems';
+import { masterQueries } from '@/data/masterQueries';
+import { SyncStatusBadge } from '@/ui/SyncStatusBadge';
+import type { SyncUiState } from '@/data/localEntities';
 import { usePermissions } from '@/hooks/usePermissions';
 import { usePushWithReturn } from '@/navigation/usePushWithReturn';
+import { useToast } from '@/ui/Toast';
 import type { Doctor, PlanItem, PlanItemStatus } from '@/domain/types';
 
 type FilterKey = 'pending' | 'visited' | 'missed';
@@ -45,13 +48,15 @@ function getDoctorId(item: PlanItem): string | null {
 
 export default function VisitsScreen() {
   const router = useRouter();
+  const toast = useToast();
   const { canDo } = usePermissions();
+  const canStartPlanned = canDo('visit_start_planned');
   const canStartUnplanned = canDo('visit_start_unplanned');
   const pushWithReturn = usePushWithReturn();
   const [tab, setTab] = React.useState<FilterKey>('pending');
   const today = useQuery({
     queryKey: ['plan-items', 'today'],
-    queryFn: () => planItemsApi.listToday(),
+    queryFn: () => masterQueries.planItemsToday(),
   });
 
   const allItems: PlanItem[] = today.data?.items ?? [];
@@ -105,9 +110,17 @@ export default function VisitsScreen() {
             return (
               <PressableCard
                 onPress={() => {
-                  if (doctorId) {
-                    pushWithReturn(`/visit/${item._id}`);
+                  if (!doctorId) return;
+                  if (item.status === 'PENDING' && !canStartPlanned) {
+                    toast.show({
+                      type: 'warning',
+                      title: 'Permission required',
+                      message:
+                        'Your role cannot mark visits. Ask your administrator to grant weeklyPlans.markVisit.',
+                    });
+                    return;
                   }
+                  pushWithReturn(`/visit/${item._id}`);
                 }}
               >
                 <View className="flex-row items-center justify-between">
@@ -121,7 +134,13 @@ export default function VisitsScreen() {
                       </Text>
                     </View>
                   </View>
-                  <Badge tone={statusTone[item.status] ?? 'default'}>{item.status}</Badge>
+                  <View className="items-end">
+                    <Badge tone={statusTone[item.status] ?? 'default'}>{item.status}</Badge>
+                    <SyncStatusBadge
+                      state={(item as { _syncState?: SyncUiState })._syncState}
+                      className="mt-1"
+                    />
+                  </View>
                 </View>
                 {item.notes ? (
                   <View className="flex-row items-center mt-2">

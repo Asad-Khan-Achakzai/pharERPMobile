@@ -14,9 +14,11 @@ import {
   Menu,
 } from 'lucide-react-native';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useTheme } from '@/theme/ThemeProvider';
 
 export default function RepTabsLayout() {
   const { canSee } = usePermissions();
+  const { colors } = useTheme();
 
   const home = canSee('rep_home');
   const visits = canSee('rep_visits');
@@ -27,11 +29,11 @@ export default function RepTabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#2563eb',
-        tabBarInactiveTintColor: '#94a3b8',
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.mutedForeground,
         tabBarStyle: {
-          backgroundColor: '#ffffff',
-          borderTopColor: '#e2e8f0',
+          backgroundColor: colors.card,
+          borderTopColor: colors.border,
           height: 64,
           paddingTop: 6,
           paddingBottom: 8,

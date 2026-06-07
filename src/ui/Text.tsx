@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Text as RNText, TextProps } from 'react-native';
 import { cn } from '@/utils/cn';
+import { useTheme } from '@/theme/ThemeProvider';
 
 export type TextTone =
   | 'default'
@@ -53,6 +54,16 @@ const toneClass: Record<TextTone, string> = {
   warning: 'text-warning',
 };
 
+const toneClassDark: Record<TextTone, string> = {
+  default: 'text-slate-50',
+  muted: 'text-slate-400',
+  inverse: 'text-slate-900',
+  primary: 'text-primary',
+  danger: 'text-destructive',
+  success: 'text-success',
+  warning: 'text-warning',
+};
+
 export interface AppTextProps extends TextProps {
   size?: TextSize;
   weight?: TextWeight;
@@ -66,12 +77,16 @@ export const Text: React.FC<AppTextProps> = ({
   tone = 'default',
   className,
   ...rest
-}) => (
-  <RNText
-    {...rest}
-    className={cn(sizeClass[size], weightClass[weight], toneClass[tone], className)}
-  />
-);
+}) => {
+  const { resolved } = useTheme();
+  const tones = resolved === 'dark' ? toneClassDark : toneClass;
+  return (
+    <RNText
+      {...rest}
+      className={cn(sizeClass[size], weightClass[weight], tones[tone], className)}
+    />
+  );
+};
 
 export const H1: React.FC<AppTextProps> = (p) => (
   <Text size="3xl" weight="bold" {...p} />

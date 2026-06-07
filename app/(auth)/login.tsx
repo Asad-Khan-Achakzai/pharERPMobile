@@ -9,6 +9,7 @@ import { Text, H1, H2, Subtitle } from '@/ui/Text';
 import { useToast } from '@/ui/Toast';
 import { authApi } from '@/api/auth';
 import { syncApi } from '@/api/sync';
+import { syncMasterDataAfterLogin } from '@/hooks/useMasterDataSync';
 import { useAuthStore } from '@/state/authStore';
 
 export default function LoginScreen() {
@@ -44,8 +45,12 @@ export default function LoginScreen() {
       try {
         const cfg = await syncApi.getServerConfig();
         await useAuthStore.getState().setServerConfig(cfg);
+        const { registerPushNotifications } = await import('@/features/push/registerPush');
+        void registerPushNotifications();
+        void syncMasterDataAfterLogin(true);
       } catch {
         /* server-config is best-effort; UI falls back to env defaults */
+        void syncMasterDataAfterLogin(false);
       }
       /**
        * Role-based redirect is owned by `RouterGuard` in `app/_layout.tsx`.

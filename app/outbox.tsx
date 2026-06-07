@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { View, FlatList } from 'react-native';
 import { useFocusEffect } from 'expo-router';
-import { Trash2, RefreshCcw, CheckCircle2, AlertCircle } from 'lucide-react-native';
+import { Trash2, RefreshCcw, CheckCircle2, AlertCircle, Database } from 'lucide-react-native';
 import { Screen } from '@/ui/Screen';
 import { Header } from '@/ui/Header';
 import { Tabs } from '@/ui/Tabs';
@@ -12,7 +12,9 @@ import { Button } from '@/ui/Button';
 import { EmptyState } from '@/ui/EmptyState';
 import { useFlags } from '@/hooks/useFlags';
 import { outbox, type CoreOutboxItem, type MediaOutboxItem } from '@/data/outbox';
-import { forceSync } from '@/data/syncEngine';
+import { forceSync, getSyncStatus } from '@/data/syncEngine';
+import { useMasterDataSync } from '@/hooks/useMasterDataSync';
+import { formatLastSync } from '@/data/masterSync';
 
 type TabKey = 'core' | 'media';
 
@@ -26,21 +28,36 @@ const stateTone: Record<string, 'success' | 'warning' | 'danger' | 'muted' | 'de
 
 export default function OutboxScreen() {
   const flags = useFlags();
+  const { meta, syncing: masterSyncing, runSync: runMasterSync, refreshMeta } = useMasterDataSync();
   const [tab, setTab] = React.useState<TabKey>('core');
   const [core, setCore] = React.useState<CoreOutboxItem[]>([]);
   const [media, setMedia] = React.useState<MediaOutboxItem[]>([]);
+  const [syncing, setSyncing] = React.useState(false);
 
   const reload = React.useCallback(async () => {
-    setCore(await outbox.listCore());
-    setMedia(await outbox.listMedia());
+    setCore(await outbox.listCoreActive());
+    setMedia(await outbox.listMediaActive());
   }, []);
+
+  const runSync = React.useCallback(async () => {
+    setSyncing(true);
+    try {
+      await forceSync();
+      await reload();
+    } finally {
+      setSyncing(false);
+    }
+  }, [reload]);
 
   useFocusEffect(
     React.useCallback(() => {
       void reload();
-      const t = setInterval(reload, 4000);
+      void refreshMeta();
+      const t = setInterval(() => {
+        void reload();
+      }, 4000);
       return () => clearInterval(t);
-    }, [reload]),
+    }, [reload, refreshMeta]),
   );
 
   return (
@@ -52,16 +69,44 @@ export default function OutboxScreen() {
           <Button
             size="sm"
             variant="ghost"
-            onPress={async () => {
-              await forceSync();
-              await reload();
-            }}
+            loading={syncing || getSyncStatus().inFlight}
+            onPress={() => void runSync()}
             leftIcon={<RefreshCcw size={16} color="#0f172a" />}
           >
             Sync now
           </Button>
         }
       />
+
+      <View className="px-4 pt-2 pb-1">
+        <Card padded>
+          <View className="flex-row items-center justify-between mb-2">
+            <View className="flex-row items-center flex-1 pr-2">
+              <Database size={18} color="#2563eb" />
+              <Text size="sm" weight="semibold" className="ml-2">
+                Offline master data
+              </Text>
+            </View>
+            <Button
+              size="sm"
+              variant="outline"
+              loading={masterSyncing}
+              onPress={() => void runMasterSync('manual').then(() => refreshMeta())}
+            >
+              Refresh
+            </Button>
+          </View>
+          <Text size="xs" tone="muted">
+            Last sync: {formatLastSync(meta.lastSuccessAt)}
+            {meta.lastError ? ` · Last error: ${meta.lastError}` : ''}
+          </Text>
+          <Text size="xs" tone="muted" className="mt-1">
+            Cached: {meta.doctors.count} doctors · {meta.pharmacies.count} pharmacies ·{' '}
+            {meta.products.count} products · {meta.weeklyPlans.count} plans ·{' '}
+            {meta.planItemsToday.count} today visits
+          </Text>
+        </Card>
+      </View>
       <Tabs
         value={tab}
         onChange={(k) => setTab(k as TabKey)}
@@ -115,6 +160,8 @@ export default function OutboxScreen() {
                     {item.lastError ? (
                       <Text size="xs" tone="danger" className="mt-1" numberOfLines={2}>
                         {item.lastError}
+                        {item.lastStatus ? ` (${item.lastStatus})` : ''}
+                        {item.attempts > 0 ? ` · ${item.attempts} attempts` : ''}
                       </Text>
                     ) : null}
                   </View>
@@ -130,8 +177,7 @@ export default function OutboxScreen() {
                           state: 'PENDING',
                           nextAttemptAt: 0,
                         });
-                        await forceSync();
-                        await reload();
+                        await runSync();
                       }}
                       className="flex-1 mr-2"
                     >

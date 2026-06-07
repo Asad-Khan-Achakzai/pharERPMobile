@@ -60,8 +60,12 @@ export const SCREEN_PERMISSIONS = {
       'attendance.governance.view',
       'weeklyPlans.review',
       'weeklyPlans.approve',
+      'expenses.approve',
       'admin.access',
     ],
+  },
+  manager_live: {
+    anyOf: ['team.view', 'team.viewAllReports', 'attendance.viewTeam', 'admin.access'],
   },
   manager_more: null,
 
@@ -101,6 +105,7 @@ export const ACTION_PERMISSIONS = {
   expense_create: { anyOf: ['expenses.create'] },
   expense_edit: { anyOf: ['expenses.edit'] },
   expense_delete: { anyOf: ['expenses.delete'] },
+  expense_approve: { anyOf: ['expenses.approve', 'admin.access'] },
   /** Mobile rep collections — backend uses `payments.create`. */
   collection_create: { anyOf: ['payments.create'] },
   visit_start_planned: { anyOf: ['weeklyPlans.markVisit'] },

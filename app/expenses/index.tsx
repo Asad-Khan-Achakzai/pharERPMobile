@@ -10,7 +10,9 @@ import { Text } from '@/ui/Text';
 import { FAB } from '@/ui/FAB';
 import { SkeletonRow } from '@/ui/Skeleton';
 import { EmptyState } from '@/ui/EmptyState';
-import { expensesApi } from '@/api/expenses';
+import { expensesQueries } from '@/data/expensesQueries';
+import { SyncStatusBadge } from '@/ui/SyncStatusBadge';
+import type { SyncUiState } from '@/data/localEntities';
 import { usePermissions } from '@/hooks/usePermissions';
 import { PermissionGate } from '@/auth/PermissionGate';
 import { usePushWithReturn } from '@/navigation/usePushWithReturn';
@@ -36,7 +38,7 @@ function ExpensesImpl() {
   const canCreate = canDo('expense_create');
   const list = useQuery({
     queryKey: ['expenses', 'list'],
-    queryFn: () => expensesApi.list({ limit: 50 }),
+    queryFn: () => expensesQueries.list({ limit: 50 }),
   });
 
   return (
@@ -82,6 +84,10 @@ function ExpensesImpl() {
                     <Text size="base" weight="semibold">
                       Rs {item.amount.toLocaleString()}
                     </Text>
+                    <SyncStatusBadge
+                      state={(item as { _syncState?: SyncUiState })._syncState}
+                      className="mt-1"
+                    />
                     {dateObj ? (
                       <Text size="xs" tone="muted" className="mt-1">
                         {format(dateObj, 'd MMM')}

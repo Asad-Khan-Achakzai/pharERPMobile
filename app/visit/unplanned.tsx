@@ -9,7 +9,7 @@ import { Text, Label } from '@/ui/Text';
 import { Badge } from '@/ui/Badge';
 import { Avatar } from '@/ui/Avatar';
 import { SkeletonRow } from '@/ui/Skeleton';
-import { doctorsApi } from '@/api/doctors';
+import { masterQueries } from '@/data/masterQueries';
 import { PermissionGate } from '@/auth/PermissionGate';
 import { useRecommendedDoctors } from '@/hooks/useRecommendedDoctors';
 import { useAuthStore } from '@/state/authStore';
@@ -61,7 +61,7 @@ function UnplannedVisitPickerImpl() {
   const lookupQ = useQuery({
     queryKey: ['doctors', 'lookup', 'visit-start', q],
     enabled: searchEnabled,
-    queryFn: () => doctorsApi.lookup({ search: q.trim(), isActive: 'true', limit: 40 }),
+    queryFn: () => masterQueries.doctorsLookup({ search: q.trim(), isActive: 'true', limit: 40 }),
   });
 
   const { recommended: searchRec, others: searchOthers } = React.useMemo(() => {

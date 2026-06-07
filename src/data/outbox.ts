@@ -1,6 +1,7 @@
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
 import { getDb } from './db';
+import { getSessionOwnerFromAuth } from './sessionLocalData';
 
 export type OutboxState = 'PENDING' | 'IN_FLIGHT' | 'COMPLETED' | 'FAILED' | 'DISCARDED';
 
@@ -66,17 +67,37 @@ interface EnqueueMediaArgs {
   clientUuid?: string;
 }
 
+function requireSessionScope(): { userId: string; companyId: string } {
+  const scope = getSessionOwnerFromAuth();
+  if (!scope) throw new Error('Not signed in');
+  return scope;
+}
+
+function sessionSql(scope: { userId: string; companyId: string } | null): {
+  clause: string;
+  params: string[];
+} {
+  if (!scope) return { clause: '1 = 0', params: [] };
+  return {
+    clause: 'user_id = ? AND company_id = ?',
+    params: [scope.userId, scope.companyId],
+  };
+}
+
 export const outbox = {
   async enqueueCore(args: EnqueueCoreArgs): Promise<string> {
     const db = await getDb();
+    const { userId, companyId } = requireSessionScope();
     const clientUuid = args.clientUuid ?? uuidv4();
     const now = Date.now();
     await db.runAsync(
       `INSERT OR REPLACE INTO outbox_core
-       (client_uuid, feature, action, method, path, body_json, state, attempts, enqueued_at, next_attempt_at)
-       VALUES (?, ?, ?, ?, ?, ?, 'PENDING', 0, ?, 0)`,
+       (client_uuid, user_id, company_id, feature, action, method, path, body_json, state, attempts, enqueued_at, next_attempt_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', 0, ?, 0)`,
       [
         clientUuid,
+        userId,
+        companyId,
         args.feature,
         args.action,
         args.method,
@@ -90,14 +111,17 @@ export const outbox = {
 
   async enqueueMedia(args: EnqueueMediaArgs): Promise<string> {
     const db = await getDb();
+    const { userId, companyId } = requireSessionScope();
     const clientUuid = args.clientUuid ?? uuidv4();
     const now = Date.now();
     await db.runAsync(
       `INSERT OR REPLACE INTO outbox_media
-       (client_uuid, feature, kind, file_uri, mime, size, related_resource, related_id, state, attempts, enqueued_at, next_attempt_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', 0, ?, 0)`,
+       (client_uuid, user_id, company_id, feature, kind, file_uri, mime, size, related_resource, related_id, state, attempts, enqueued_at, next_attempt_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', 0, ?, 0)`,
       [
         clientUuid,
+        userId,
+        companyId,
         args.feature,
         args.kind,
         args.fileUri,
@@ -113,42 +137,60 @@ export const outbox = {
 
   async listCore(state?: OutboxState): Promise<CoreOutboxItem[]> {
     const db = await getDb();
-    const where = state ? 'WHERE state = ?' : '';
+    const scope = sessionSql(getSessionOwnerFromAuth());
+    const where = state
+      ? `WHERE ${scope.clause} AND state = ?`
+      : `WHERE ${scope.clause}`;
     const rows = (await db.getAllAsync(
       `SELECT * FROM outbox_core ${where} ORDER BY enqueued_at DESC LIMIT 200`,
-      state ? [state] : [],
+      state ? [...scope.params, state] : scope.params,
     )) as any[];
     return rows.map(rowToCore);
   },
 
   async listMedia(state?: OutboxState): Promise<MediaOutboxItem[]> {
     const db = await getDb();
-    const where = state ? 'WHERE state = ?' : '';
+    const scope = sessionSql(getSessionOwnerFromAuth());
+    const where = state
+      ? `WHERE ${scope.clause} AND state = ?`
+      : `WHERE ${scope.clause}`;
     const rows = (await db.getAllAsync(
       `SELECT * FROM outbox_media ${where} ORDER BY enqueued_at DESC LIMIT 200`,
-      state ? [state] : [],
+      state ? [...scope.params, state] : scope.params,
     )) as any[];
     return rows.map(rowToMedia);
   },
 
   async dueCore(now = Date.now()): Promise<CoreOutboxItem[]> {
     const db = await getDb();
+    const scope = sessionSql(getSessionOwnerFromAuth());
     const rows = (await db.getAllAsync(
       `SELECT * FROM outbox_core
-       WHERE state = 'PENDING' AND next_attempt_at <= ?
-       ORDER BY enqueued_at ASC LIMIT 20`,
-      [now],
+       WHERE ${scope.clause} AND state = 'PENDING' AND next_attempt_at <= ?
+       ORDER BY
+         CASE feature
+           WHEN 'attendance' THEN 1
+           WHEN 'visit' THEN 2
+           WHEN 'order' THEN 3
+           WHEN 'expense' THEN 4
+           WHEN 'live-tracking' THEN 5
+           ELSE 6
+         END,
+         enqueued_at ASC
+       LIMIT 20`,
+      [...scope.params, now],
     )) as any[];
     return rows.map(rowToCore);
   },
 
   async dueMedia(now = Date.now()): Promise<MediaOutboxItem[]> {
     const db = await getDb();
+    const scope = sessionSql(getSessionOwnerFromAuth());
     const rows = (await db.getAllAsync(
       `SELECT * FROM outbox_media
-       WHERE state = 'PENDING' AND next_attempt_at <= ?
+       WHERE ${scope.clause} AND state = 'PENDING' AND next_attempt_at <= ?
        ORDER BY enqueued_at ASC LIMIT 5`,
-      [now],
+      [...scope.params, now],
     )) as any[];
     return rows.map(rowToMedia);
   },
@@ -231,26 +273,83 @@ export const outbox = {
 
   async retryAll(): Promise<void> {
     const db = await getDb();
+    const scope = sessionSql(getSessionOwnerFromAuth());
+    if (!scope.params.length) return;
     await db.runAsync(
+      `UPDATE outbox_core SET state = 'PENDING', next_attempt_at = 0, attempts = 0
+       WHERE ${scope.clause} AND state IN ('FAILED', 'PENDING', 'IN_FLIGHT')`,
+      scope.params,
+    );
+    await db.runAsync(
+      `UPDATE outbox_media SET state = 'PENDING', next_attempt_at = 0, attempts = 0
+       WHERE ${scope.clause} AND state IN ('FAILED', 'PENDING', 'IN_FLIGHT')`,
+      scope.params,
+    );
+  },
+
+  /** Reset stale IN_FLIGHT rows after app crash or killed sync session. */
+  async recoverStaleInFlight(maxAgeMs = 5 * 60 * 1000): Promise<number> {
+    const db = await getDb();
+    const scope = sessionSql(getSessionOwnerFromAuth());
+    if (!scope.params.length) return 0;
+    const cutoff = Date.now() - maxAgeMs;
+    const result = await db.runAsync(
       `UPDATE outbox_core SET state = 'PENDING', next_attempt_at = 0
-       WHERE state IN ('FAILED','PENDING')`,
+       WHERE ${scope.clause} AND state = 'IN_FLIGHT' AND enqueued_at < ?`,
+      [...scope.params, cutoff],
     );
     await db.runAsync(
       `UPDATE outbox_media SET state = 'PENDING', next_attempt_at = 0
-       WHERE state IN ('FAILED','PENDING')`,
+       WHERE ${scope.clause} AND state = 'IN_FLIGHT' AND enqueued_at < ?`,
+      [...scope.params, cutoff],
     );
+    return result.changes ?? 0;
+  },
+
+  async listCoreActive(): Promise<CoreOutboxItem[]> {
+    const db = await getDb();
+    const scope = sessionSql(getSessionOwnerFromAuth());
+    const rows = (await db.getAllAsync(
+      `SELECT * FROM outbox_core
+       WHERE ${scope.clause} AND state != 'COMPLETED' AND state != 'DISCARDED'
+       ORDER BY enqueued_at DESC LIMIT 200`,
+      scope.params,
+    )) as any[];
+    return rows.map(rowToCore);
+  },
+
+  async listMediaActive(): Promise<MediaOutboxItem[]> {
+    const db = await getDb();
+    const scope = sessionSql(getSessionOwnerFromAuth());
+    const rows = (await db.getAllAsync(
+      `SELECT * FROM outbox_media
+       WHERE ${scope.clause} AND state != 'COMPLETED' AND state != 'DISCARDED'
+       ORDER BY enqueued_at DESC LIMIT 200`,
+      scope.params,
+    )) as any[];
+    return rows.map(rowToMedia);
   },
 
   async countPending(): Promise<{ core: number; media: number; failed: number }> {
     const db = await getDb();
+    const scope = sessionSql(getSessionOwnerFromAuth());
+    if (!scope.params.length) {
+      return { core: 0, media: 0, failed: 0 };
+    }
     const c = (await db.getFirstAsync(
-      `SELECT COUNT(*) AS n FROM outbox_core WHERE state = 'PENDING'`,
+      `SELECT COUNT(*) AS n FROM outbox_core
+       WHERE ${scope.clause} AND state IN ('PENDING', 'IN_FLIGHT')`,
+      scope.params,
     )) as any;
     const m = (await db.getFirstAsync(
-      `SELECT COUNT(*) AS n FROM outbox_media WHERE state = 'PENDING'`,
+      `SELECT COUNT(*) AS n FROM outbox_media
+       WHERE ${scope.clause} AND state IN ('PENDING', 'IN_FLIGHT')`,
+      scope.params,
     )) as any;
     const f = (await db.getFirstAsync(
-      `SELECT COUNT(*) AS n FROM outbox_core WHERE state = 'FAILED'`,
+      `SELECT COUNT(*) AS n FROM outbox_core
+       WHERE ${scope.clause} AND state = 'FAILED'`,
+      scope.params,
     )) as any;
     return { core: c?.n ?? 0, media: m?.n ?? 0, failed: f?.n ?? 0 };
   },
