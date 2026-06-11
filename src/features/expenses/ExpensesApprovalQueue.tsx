@@ -1,10 +1,10 @@
 import * as React from 'react';
-import { View, FlatList, Modal, RefreshControl } from 'react-native';
+import { View, FlatList, Modal, RefreshControl, Pressable, ScrollView } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format, parseISO, isValid } from 'date-fns';
 import { CheckCircle2, XCircle } from 'lucide-react-native';
 import { Card } from '@/ui/Card';
-import { Text, Subtitle } from '@/ui/Text';
+import { Text, Subtitle, Label } from '@/ui/Text';
 import { Button } from '@/ui/Button';
 import { Badge } from '@/ui/Badge';
 import { TextField } from '@/ui/TextField';
@@ -12,7 +12,9 @@ import { SkeletonRow } from '@/ui/Skeleton';
 import { EmptyState } from '@/ui/EmptyState';
 import { useToast } from '@/ui/Toast';
 import { expensesApi } from '@/api/expenses';
-import type { Expense, ID } from '@/domain/types';
+import { accountsApi, moneyAccountLabel, resolveMoneyAccountId } from '@/api/accounts';
+import type { Expense, ID, MoneyAccount } from '@/domain/types';
+import { cn } from '@/utils/cn';
 
 function employeeName(expense: Expense): string {
   const e = expense.employeeId;
@@ -20,22 +22,54 @@ function employeeName(expense: Expense): string {
   return 'Field rep';
 }
 
+function defaultMoneyAccountId(
+  expense: Expense | null,
+  accounts: MoneyAccount[]
+): ID | '' {
+  if (!accounts.length) return '';
+  const existing = resolveMoneyAccountId(expense?.moneyAccountId);
+  if (existing && accounts.some((a) => a._id === existing)) return existing;
+  const cash = accounts.find((a) => a.moneyAccountNature === 'CASH');
+  return cash?._id ?? accounts[0]._id;
+}
+
 export const ExpensesApprovalQueue: React.FC = () => {
   const toast = useToast();
   const qc = useQueryClient();
   const [rejectFor, setRejectFor] = React.useState<Expense | null>(null);
   const [rejectReason, setRejectReason] = React.useState('');
+  const [approveFor, setApproveFor] = React.useState<Expense | null>(null);
+  const [moneyAccountId, setMoneyAccountId] = React.useState<ID | ''>('');
 
   const list = useQuery({
     queryKey: ['expenses', 'inbox'],
     queryFn: () => expensesApi.inbox(),
   });
 
+  const moneyAccounts = useQuery({
+    queryKey: ['accounts', 'money'],
+    queryFn: () => accountsApi.listMoneyAccounts(),
+    enabled: !!approveFor,
+  });
+
+  React.useEffect(() => {
+    if (!approveFor || !moneyAccounts.data?.length) return;
+    setMoneyAccountId((prev) =>
+      prev && moneyAccounts.data!.some((a) => a._id === prev)
+        ? prev
+        : defaultMoneyAccountId(approveFor, moneyAccounts.data!)
+    );
+  }, [approveFor, moneyAccounts.data]);
+
   const approve = useMutation({
-    mutationFn: (id: ID) => expensesApi.approve(id),
+    mutationFn: ({ id, moneyAccountId: accountId }: { id: ID; moneyAccountId: ID }) =>
+      expensesApi.approve(id, { moneyAccountId: accountId }),
     onSuccess: () => {
       toast.show({ tone: 'success', message: 'Expense approved' });
       qc.invalidateQueries({ queryKey: ['expenses', 'inbox'] });
+      qc.invalidateQueries({ queryKey: ['expenses', 'list'] });
+      setApproveFor(null);
+      setMoneyAccountId('');
     },
     onError: (err: unknown) => {
       toast.show({ tone: 'danger', message: (err as Error)?.message ?? 'Could not approve' });
@@ -115,7 +149,10 @@ export const ExpensesApprovalQueue: React.FC = () => {
                 <Button
                   size="sm"
                   className="flex-1"
-                  onPress={() => approve.mutate(item._id)}
+                  onPress={() => {
+                    setMoneyAccountId('');
+                    setApproveFor(item);
+                  }}
                   leftIcon={<CheckCircle2 size={14} color="#fff" />}
                 >
                   Approve
@@ -125,6 +162,85 @@ export const ExpensesApprovalQueue: React.FC = () => {
           );
         }}
       />
+
+      <Modal visible={!!approveFor} transparent animationType="fade">
+        <View className="flex-1 bg-black/40 justify-center px-4">
+          <Card>
+            <Text size="lg" weight="semibold">
+              Approve expense
+            </Text>
+            <Text size="sm" tone="muted" className="mt-1">
+              {approveFor?.description || 'Field expense'} · Rs{' '}
+              {Math.round(approveFor?.amount ?? 0).toLocaleString()}
+            </Text>
+            <Label className="mt-4 mb-2">Paid from</Label>
+            <Text size="xs" tone="muted" className="mb-2">
+              Which cash or bank account was used for this payment?
+            </Text>
+            {moneyAccounts.isLoading ? (
+              <SkeletonRow count={2} />
+            ) : (moneyAccounts.data ?? []).length === 0 ? (
+              <Text size="sm" tone="muted">
+                No money accounts are configured for this company.
+              </Text>
+            ) : (
+              <ScrollView
+                style={{ maxHeight: 220 }}
+                nestedScrollEnabled
+                showsVerticalScrollIndicator
+                keyboardShouldPersistTaps="handled"
+                contentContainerClassName="pb-1"
+              >
+                {(moneyAccounts.data ?? []).map((account) => {
+                  const selected = moneyAccountId === account._id;
+                  return (
+                    <Pressable
+                      key={account._id}
+                      onPress={() => setMoneyAccountId(account._id)}
+                      className={cn(
+                        'rounded-xl border px-3 py-2.5 mb-2',
+                        selected ? 'border-primary bg-primary/5' : 'border-border'
+                      )}
+                    >
+                      <Text size="sm" weight={selected ? 'semibold' : 'medium'}>
+                        {moneyAccountLabel(account)}
+                      </Text>
+                      {account.moneyAccountNature ? (
+                        <Text size="xs" tone="muted" className="mt-0.5">
+                          {account.moneyAccountNature}
+                        </Text>
+                      ) : null}
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            )}
+            <View className="flex-row mt-4 pt-3 border-t border-border">
+              <Button
+                variant="outline"
+                className="flex-1 mr-2"
+                onPress={() => {
+                  setApproveFor(null);
+                  setMoneyAccountId('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1"
+                loading={approve.isPending}
+                disabled={!moneyAccountId || moneyAccounts.isLoading}
+                onPress={() => {
+                  if (!approveFor || !moneyAccountId) return;
+                  approve.mutate({ id: approveFor._id, moneyAccountId });
+                }}
+              >
+                Approve
+              </Button>
+            </View>
+          </Card>
+        </View>
+      </Modal>
 
       <Modal visible={!!rejectFor} transparent animationType="fade">
         <View className="flex-1 bg-black/40 justify-center px-4">

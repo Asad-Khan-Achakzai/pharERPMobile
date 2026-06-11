@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { Screen } from '@/ui/Screen';
 import { Header } from '@/ui/Header';
 import { Card } from '@/ui/Card';
+import { Badge } from '@/ui/Badge';
 import { Text } from '@/ui/Text';
 import { FAB } from '@/ui/FAB';
 import { SkeletonRow } from '@/ui/Skeleton';
@@ -25,6 +26,19 @@ const CATEGORY_LABEL: Record<string, string> = {
   SALARY: 'Salary',
   OTHER: 'Other',
 };
+
+const STATUS_TONE: Record<string, 'warning' | 'success' | 'danger' | 'muted'> = {
+  PENDING: 'warning',
+  APPROVED: 'success',
+  REJECTED: 'danger',
+};
+
+function expenseStatusLabel(status?: string): string {
+  if (status === 'PENDING') return 'Pending approval';
+  if (status === 'REJECTED') return 'Rejected';
+  if (status === 'APPROVED') return 'Approved';
+  return 'Approved';
+}
 
 function safeDate(value: string | undefined) {
   if (!value) return null;
@@ -68,12 +82,13 @@ function ExpensesImpl() {
           ItemSeparatorComponent={() => <View className="h-2" />}
           renderItem={({ item }) => {
             const dateObj = safeDate(item.date);
+            const status = item.status ?? 'APPROVED';
             return (
               <Card padded>
                 <View className="flex-row items-center justify-between">
                   <View className="flex-1 pr-2">
                     <Text size="base" weight="semibold" numberOfLines={1}>
-                      {CATEGORY_LABEL[item.category] ?? item.category}
+                      {CATEGORY_LABEL[item.category] ?? item.category ?? 'Expense'}
                     </Text>
                     <Text size="xs" tone="muted" numberOfLines={1}>
                       {item.description ??
@@ -84,6 +99,9 @@ function ExpensesImpl() {
                     <Text size="base" weight="semibold">
                       Rs {item.amount.toLocaleString()}
                     </Text>
+                    <Badge tone={STATUS_TONE[status] ?? 'muted'} className="mt-1">
+                      {expenseStatusLabel(status)}
+                    </Badge>
                     <SyncStatusBadge
                       state={(item as { _syncState?: SyncUiState })._syncState}
                       className="mt-1"

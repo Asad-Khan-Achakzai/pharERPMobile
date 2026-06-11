@@ -9,9 +9,9 @@
  *  Canonical categories live in `EXPENSE_CATEGORY` enum:
  *    DOCTOR_INVESTMENT | SALARY | RENT | LOGISTICS | OFFICE | OTHER.
  *
- *  NOTE: There is NO approval workflow on the backend. Expenses are
- *  auto-marked `approvedBy = currentUser` on create. We do not surface a
- *  PENDING/APPROVED/REJECTED status anywhere.
+ *  Mobile sends `category`; backend maps to COA accounts (default Cash).
+ *  When company `expenseApprovalRequired` is on, status is PENDING until
+ *  a manager approves in `(manager)/approvals` → Expenses.
  */
 import * as React from 'react';
 import { View } from 'react-native';
@@ -70,8 +70,12 @@ function NewExpenseImpl() {
 
   const submit = useMutation({
     mutationFn: () => expensesApi.create({ ...buildBody(), clientUuid: uuidv4() }),
-    onSuccess: () => {
-      toast.show({ tone: 'success', message: 'Expense submitted' });
+    onSuccess: (expense) => {
+      const pending = expense.status === 'PENDING';
+      toast.show({
+        tone: 'success',
+        message: pending ? 'Expense submitted for manager approval' : 'Expense submitted',
+      });
       qc.invalidateQueries({ queryKey: ['expenses', 'list'] });
       router.back();
     },

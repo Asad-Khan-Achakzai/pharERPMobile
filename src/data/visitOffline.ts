@@ -26,12 +26,13 @@ export interface VisitSubmitPayload {
   clientUuid?: string;
 }
 
-async function captureVisitLocation(): Promise<{ lat: number; lng: number } | undefined> {
+async function captureVisitLocation(): Promise<{ lat: number; lng: number; accuracy?: number | null } | undefined> {
   try {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') return undefined;
     const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-    return { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    const accuracy = pos.coords.accuracy ?? null;
+    return { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy };
   } catch {
     return undefined;
   }
@@ -46,7 +47,7 @@ function isRetriableVisitError(err: unknown): boolean {
 function buildTimedBody(
   startedAt: Date,
   base: Record<string, unknown>,
-  location?: { lat: number; lng: number }
+  location?: { lat: number; lng: number; accuracy?: number | null }
 ): Record<string, unknown> {
   const visitTime = new Date().toISOString();
   return {
@@ -54,7 +55,15 @@ function buildTimedBody(
     visitTime,
     checkInTime: startedAt.toISOString(),
     checkOutTime: visitTime,
-    ...(location ? { location } : {}),
+    ...(location
+      ? {
+          location: {
+            lat: location.lat,
+            lng: location.lng,
+            ...(location.accuracy != null ? { accuracy: location.accuracy } : {}),
+          },
+        }
+      : {}),
   };
 }
 

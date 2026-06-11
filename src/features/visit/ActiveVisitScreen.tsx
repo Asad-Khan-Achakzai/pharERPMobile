@@ -17,7 +17,7 @@
  *    (one of EMERGENCY | AVAILABLE_UNEXPECTEDLY | OTHER).
  */
 import * as React from 'react';
-import { View, ScrollView } from 'react-native';
+import { View, ScrollView, Linking } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
@@ -38,7 +38,11 @@ import { Button } from '@/ui/Button';
 import { Text, H2, Subtitle } from '@/ui/Text';
 import { TextField } from '@/ui/TextField';
 import { DatePickerField } from '@/ui/DatePickerField';
-import { formatDoctorHeaderSubtitle } from '@/features/doctors/doctorDisplay';
+import {
+  doctorMapsUrl,
+  formatDoctorCoords,
+  formatDoctorHeaderSubtitle,
+} from '@/features/doctors/doctorDisplay';
 import { useAppBack } from '@/navigation/useAppBack';
 import { Switch } from '@/ui/Switch';
 import { StickyActionBar } from '@/ui/StickyActionBar';
@@ -299,6 +303,14 @@ export const ActiveVisitScreen: React.FC<ActiveVisitScreenProps> = ({
         });
         return;
       }
+      if (apiErr && apiErr.status === 422) {
+        toast.show({
+          tone: 'danger',
+          title: 'Visit blocked',
+          message: apiErr.message || 'Could not record visit',
+        });
+        return;
+      }
       const message = (err as { message?: string })?.message;
       toast.show({ tone: 'danger', message: message ?? 'Could not record visit' });
     },
@@ -433,7 +445,10 @@ function territoryLine(doctor: Doctor | null): string {
   return [doctor.doctorBrick, doctor.zone].filter(Boolean).join(' · ') || '—';
 }
 
-const DetailsTab: React.FC<{ doctor: Doctor | null }> = ({ doctor }) => (
+const DetailsTab: React.FC<{ doctor: Doctor | null }> = ({ doctor }) => {
+  const gpsCoords = formatDoctorCoords(doctor?.latitude, doctor?.longitude);
+
+  return (
   <Card className="mt-2">
     <H2 className="mb-2">Doctor</H2>
     <ListRow title="Specialization" subtitle={doctor?.specialization ?? '—'} />
@@ -452,6 +467,19 @@ const DetailsTab: React.FC<{ doctor: Doctor | null }> = ({ doctor }) => (
       title="Address"
       subtitle={[doctor?.address, doctor?.city].filter(Boolean).join(', ') || '—'}
     />
+    {gpsCoords ? (
+      <>
+        <Divider />
+        <ListRow
+          title="GPS coordinates"
+          subtitle={gpsCoords}
+          chevron
+          onPress={() =>
+            Linking.openURL(doctorMapsUrl(doctor!.latitude!, doctor!.longitude!))
+          }
+        />
+      </>
+    ) : null}
     <Divider />
     <ListRow title="Phone" subtitle={doctor?.phone ?? doctor?.mobileNo ?? '—'} />
     <Divider />
@@ -464,7 +492,8 @@ const DetailsTab: React.FC<{ doctor: Doctor | null }> = ({ doctor }) => (
       onPick={() => undefined}
     />
   </Card>
-);
+  );
+};
 
 const ProductsTab: React.FC<{
   products: Product[];

@@ -11,7 +11,7 @@ export interface MarkVisitInput {
   visitTime?: string;
   checkInTime?: string;
   checkOutTime?: string;
-  location?: { lat: number; lng: number };
+  location?: { lat: number; lng: number; accuracy?: number | null };
   doctorId?: ID | null;
   productsDiscussed?: ID[];
   primaryProductId?: ID | null;
@@ -33,7 +33,7 @@ export interface UnplannedVisitInput {
   visitTime?: string;
   checkInTime?: string;
   checkOutTime?: string;
-  location?: { lat: number; lng: number };
+  location?: { lat: number; lng: number; accuracy?: number | null };
   productsDiscussed?: ID[];
   primaryProductId?: ID | null;
   samplesQty?: number | null;

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View } from 'react-native';
+import { Linking, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Phone, MapPin, History, Stethoscope, Pencil } from 'lucide-react-native';
@@ -17,6 +17,7 @@ import { masterQueries } from '@/data/masterQueries';
 import { doctorsApi } from '@/api/doctors';
 import { usePermissions } from '@/hooks/usePermissions';
 import { usePushWithReturn } from '@/navigation/usePushWithReturn';
+import { doctorMapsUrl, formatDoctorCoords } from '@/features/doctors/doctorDisplay';
 
 export default function DoctorProfile() {
   const pushWithReturn = usePushWithReturn();
@@ -41,6 +42,7 @@ export default function DoctorProfile() {
   const phoneNo = d.phone ?? d.mobileNo ?? '—';
   const addressLine =
     [d.locationName, d.address, d.city, d.zone].filter(Boolean).join(', ') || '—';
+  const gpsCoords = formatDoctorCoords(d.latitude, d.longitude);
 
   const canEdit = can('doctors.edit');
 
@@ -98,6 +100,20 @@ export default function DoctorProfile() {
               title="Location"
               subtitle={d.locationName ?? '—'}
             />
+            {gpsCoords ? (
+              <>
+                <Divider />
+                <ListRow
+                  left={<MapPin size={18} color="#2563eb" />}
+                  title="GPS coordinates"
+                  subtitle={gpsCoords}
+                  chevron
+                  onPress={() =>
+                    Linking.openURL(doctorMapsUrl(d.latitude!, d.longitude!))
+                  }
+                />
+              </>
+            ) : null}
           </View>
         </Card>
 

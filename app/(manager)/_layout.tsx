@@ -1,7 +1,6 @@
 /**
  * Manager shell tabs. The Approvals tab shows a pending count badge derived
- * from the combined attendance-request inbox + weekly-plan queue, mirroring
- * the dashboard "Action Center" badge on web.
+ * from the combined attendance-request inbox, weekly-plan queue, and expense inbox.
  */
 import * as React from 'react';
 import { Tabs } from 'expo-router';
@@ -9,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Home, Users, ClipboardCheck, Menu } from 'lucide-react-native';
 import { attendanceRequestsApi } from '@/api/attendanceRequests';
 import { weeklyPlansApi } from '@/api/weeklyPlans';
+import { expensesApi } from '@/api/expenses';
 import { usePermissions } from '@/hooks/usePermissions';
 
 const ATTENDANCE_APPROVE_PERMISSIONS = [
@@ -24,6 +24,7 @@ function useApprovalsBadge() {
   const canGovernance = canAny(ATTENDANCE_GOVERNANCE_PERMISSIONS);
   const canAttendance = canAny(ATTENDANCE_APPROVE_PERMISSIONS);
   const canPlans = canAny(['weeklyPlans.review', 'weeklyPlans.approve']);
+  const canExpenses = canAny(['expenses.approve', 'admin.access']);
 
   /**
    * Admin badge has to count the company-wide governance queue (same source
@@ -53,8 +54,15 @@ function useApprovalsBadge() {
     refetchInterval: 60_000,
     staleTime: 30_000,
   });
+  const expenses = useQuery({
+    queryKey: ['expenses', 'inbox', 'badge'],
+    enabled: canExpenses,
+    queryFn: () => expensesApi.inbox(),
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
 
-  const total = (queue.data?.length ?? 0) + (plans.data?.length ?? 0);
+  const total = (queue.data?.length ?? 0) + (plans.data?.length ?? 0) + (expenses.data?.length ?? 0);
   if (total <= 0) return undefined;
   return total > 99 ? '99+' : String(total);
 }

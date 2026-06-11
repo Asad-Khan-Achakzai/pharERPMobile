@@ -30,6 +30,15 @@ export function formatDoctorSubtitle(
   return parts.join(' · ') || '—';
 }
 
+export function formatDoctorCoords(lat?: number | null, lng?: number | null): string | null {
+  if (typeof lat !== 'number' || typeof lng !== 'number') return null;
+  return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+}
+
+export function doctorMapsUrl(lat: number, lng: number): string {
+  return `https://www.google.com/maps?q=${lat},${lng}`;
+}
+
 export function formatDoctorHeaderSubtitle(
   doctor: Pick<Doctor, 'specialization' | 'qualification' | 'designation' | 'doctorBrick' | 'city'>
 ): string | undefined {

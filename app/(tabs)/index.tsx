@@ -25,6 +25,7 @@ export default function HomeScreen() {
     await qc.invalidateQueries({ queryKey: ['dashboard', 'team-summary'] });
     await qc.invalidateQueries({ queryKey: ['weekly-plans', 'pending-approvals'] });
     await qc.invalidateQueries({ queryKey: ['attendance', 'requests'] });
+    await qc.invalidateQueries({ queryKey: ['expenses', 'inbox'] });
   }, [qc]);
 
   const [refreshing, setRefreshing] = React.useState(false);

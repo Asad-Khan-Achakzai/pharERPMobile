@@ -66,18 +66,14 @@ export const expensesApi = {
   },
 
   async inbox(): Promise<Expense[]> {
-    try {
-      const resp = await api.get('/expenses/inbox', { params: { limit: 50 } });
-      const data = resp.data;
-      const rows = data.data ?? data;
-      return Array.isArray(rows) ? rows : [];
-    } catch {
-      return [];
-    }
+    const resp = await api.get('/expenses/inbox', { params: { limit: 50 } });
+    const data = resp.data;
+    const rows = data.data ?? data;
+    return Array.isArray(rows) ? rows : [];
   },
 
-  async approve(id: ID): Promise<Expense> {
-    const resp = await api.post(`/expenses/${id}/approve`);
+  async approve(id: ID, input: { moneyAccountId: ID }): Promise<Expense> {
+    const resp = await api.post(`/expenses/${id}/approve`, input);
     return unwrap<Expense>(resp);
   },
 

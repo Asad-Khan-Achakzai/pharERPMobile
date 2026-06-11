@@ -94,6 +94,9 @@ export interface Doctor {
   monthlyVisitTarget?: number | null;
   isActive?: boolean;
   isDeleted?: boolean;
+  locationStatus?: string;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface PharmacyBonusScheme {
@@ -483,6 +486,14 @@ export type ExpenseCategory =
 
 export type ExpenseStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
+export interface MoneyAccount {
+  _id: ID;
+  code?: string;
+  name?: string;
+  moneyAccountNature?: 'CASH' | 'BANK' | string;
+  currentBalance?: number;
+}
+
 export interface Expense {
   _id: ID;
   companyId?: ID;
@@ -496,6 +507,8 @@ export interface Expense {
   approvedBy?: ID | null | { _id?: ID; name?: string };
   status?: ExpenseStatus;
   rejectionReason?: string | null;
+  expenseAccountId?: ID | { _id: ID; code?: string; name?: string } | null;
+  moneyAccountId?: ID | { _id: ID; code?: string; name?: string; moneyAccountNature?: string } | null;
   createdBy?: ID | null;
   createdAt?: ISO;
 }

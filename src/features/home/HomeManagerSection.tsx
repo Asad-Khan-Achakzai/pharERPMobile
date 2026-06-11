@@ -9,6 +9,7 @@ import { SkeletonRow } from '@/ui/Skeleton';
 import { dashboardApi } from '@/api/dashboard';
 import { attendanceRequestsApi } from '@/api/attendanceRequests';
 import { weeklyPlansApi } from '@/api/weeklyPlans';
+import { expensesApi } from '@/api/expenses';
 import { attendanceApi } from '@/api/attendance';
 import { usePermissions } from '@/hooks/usePermissions';
 import { usePushWithReturn } from '@/navigation/usePushWithReturn';
@@ -17,6 +18,7 @@ import { usePushWithReturn } from '@/navigation/usePushWithReturn';
 const MANAGER_HOME_PERMISSIONS = [
   'weeklyPlans.review',
   'attendance.approve',
+  'expenses.approve',
   'team.view',
   'admin.access',
 ] as const;
@@ -28,6 +30,7 @@ const APPROVAL_PERMISSIONS = [
   'attendance.approve.direct',
   'attendance.approve.escalated',
   'attendance.governance.view',
+  'expenses.approve',
   'admin.access',
 ];
 
@@ -85,11 +88,18 @@ export const HomeManagerSection: React.FC = () => {
       ]),
   });
 
+  const expenseApprovals = useQuery({
+    queryKey: ['expenses', 'inbox', 'home'],
+    queryFn: () => expensesApi.inbox(),
+    enabled: showSection && showApprovals && canAny(['expenses.approve', 'admin.access']),
+  });
+
   if (!showSection) return null;
 
   const planCount = planApprovals.data?.length ?? 0;
   const attendanceCount = attendanceApprovals.data?.length ?? 0;
-  const pendingApprovalTotal = planCount + attendanceCount;
+  const expenseCount = expenseApprovals.data?.length ?? 0;
+  const pendingApprovalTotal = planCount + attendanceCount + expenseCount;
 
   const visitToday = teamSummary.data?.today;
   const missedTeamVisits = visitToday?.missed ?? 0;
@@ -102,7 +112,16 @@ export const HomeManagerSection: React.FC = () => {
   const loading =
     (showTeamVisits && teamSummary.isLoading) ||
     (showTeamAttendance && teamAttendance.isLoading) ||
-    (showApprovals && (planApprovals.isLoading || attendanceApprovals.isLoading));
+    (showApprovals &&
+      (planApprovals.isLoading || attendanceApprovals.isLoading || expenseApprovals.isLoading));
+
+  const approvalSummaryParts = [
+    planCount > 0 ? `${planCount} weekly plan${planCount === 1 ? '' : 's'}` : null,
+    attendanceCount > 0
+      ? `${attendanceCount} attendance request${attendanceCount === 1 ? '' : 's'}`
+      : null,
+    expenseCount > 0 ? `${expenseCount} expense${expenseCount === 1 ? '' : 's'}` : null,
+  ].filter(Boolean);
 
   return (
     <View className="mt-1">
@@ -137,11 +156,7 @@ export const HomeManagerSection: React.FC = () => {
             </Button>
           </View>
           <Text size="sm" tone="muted">
-            {planCount > 0 ? `${planCount} weekly plan${planCount === 1 ? '' : 's'}` : null}
-            {planCount > 0 && attendanceCount > 0 ? ' · ' : null}
-            {attendanceCount > 0
-              ? `${attendanceCount} attendance request${attendanceCount === 1 ? '' : 's'}`
-              : null}
+            {approvalSummaryParts.join(' · ')}
           </Text>
         </Card>
       ) : showApprovals ? (
