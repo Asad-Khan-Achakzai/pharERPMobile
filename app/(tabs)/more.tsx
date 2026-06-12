@@ -30,6 +30,9 @@ import {
   Sun,
   Monitor,
   Wallet,
+  Landmark,
+  BookOpen,
+  Truck,
 } from 'lucide-react-native';
 import { Screen } from '@/ui/Screen';
 import { Header } from '@/ui/Header';
@@ -92,6 +95,57 @@ const ENTRIES_PRIMARY: MoreEntry[] = [
     permissionAny: ['weeklyPlans.view', 'weeklyPlans.edit'],
   },
 ];
+
+/** Finance & accounting — mirrors web `verticalMenuData` Finance group (admin / accountant). */
+const ENTRIES_FINANCE: MoreEntry[] = [
+  {
+    key: 'finance-expenses',
+    title: 'Expenses',
+    icon: <Receipt size={18} color="#0f172a" />,
+    route: '/expenses',
+    permissionAny: ['expenses.view', 'expenses.create'],
+  },
+  {
+    key: 'finance-collections',
+    title: 'Payments & collections',
+    icon: <Wallet size={18} color="#0f172a" />,
+    route: '/pharmacy',
+    permissionAny: ['payments.view', 'payments.create', 'pharmacies.view'],
+  },
+  {
+    key: 'customer-balances',
+    title: 'Customer balances',
+    icon: <Landmark size={18} color="#0f172a" />,
+    route: '/finance/customer-balances',
+    permissionAny: ['ledger.view', 'admin.access'],
+  },
+  {
+    key: 'general-ledger',
+    title: 'General ledger',
+    icon: <BookOpen size={18} color="#0f172a" />,
+    route: '/finance/general-ledger',
+    permissionAny: ['reports.accounting', 'admin.access'],
+  },
+  {
+    key: 'supplier-ledger',
+    title: 'Supplier ledger',
+    icon: <Truck size={18} color="#0f172a" />,
+    route: '/finance/supplier-ledger',
+    permissionAny: ['ledger.view', 'admin.access'],
+  },
+];
+
+/** Keys moved under Finance when the user has accountant/admin finance access. */
+const FINANCE_PRIMARY_KEYS = new Set(['expenses', 'collections']);
+
+const FINANCE_SECTION_PERMISSIONS = [
+  'ledger.view',
+  'reports.view',
+  'reports.accounting',
+  'accounts.view',
+  'vouchers.view',
+  'admin.access',
+] as const;
 
 /**
  * Manager workflows — shown only when the user has approval / team permissions.
@@ -203,8 +257,18 @@ export default function MoreScreen() {
    * so a re-fetched permissions array on the same user does NOT cause the
    * tab list to mutate mid-session.
    */
-  const primary = React.useMemo(
-    () => filterEntries(user, ENTRIES_PRIMARY),
+  const primary = React.useMemo(() => {
+    const financeCapable = hasAnyPermission(user, [...FINANCE_SECTION_PERMISSIONS]);
+    const finance = filterEntries(user, ENTRIES_FINANCE);
+    const base = filterEntries(user, ENTRIES_PRIMARY);
+    if (!financeCapable || finance.length === 0) return base;
+    return base.filter((e) => !FINANCE_PRIMARY_KEYS.has(e.key));
+  }, [user?._id]);
+  const finance = React.useMemo(
+    () => {
+      if (!hasAnyPermission(user, [...FINANCE_SECTION_PERMISSIONS])) return [];
+      return filterEntries(user, ENTRIES_FINANCE);
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [user?._id]
   );
@@ -256,6 +320,25 @@ export default function MoreScreen() {
               <React.Fragment key={e.key}>
                 <ListRow left={e.icon} title={e.title} chevron onPress={() => pushWithReturn(e.route)} />
                 {i < primary.length - 1 ? <Divider /> : null}
+              </React.Fragment>
+            ))}
+          </View>
+        </Card>
+      ) : null}
+
+      {finance.length > 0 ? (
+        <Card className="mx-4 mt-2" padded={false}>
+          <View className="px-3 py-2">
+            <Text size="xs" tone="muted" weight="medium">
+              Finance
+            </Text>
+          </View>
+          <Divider />
+          <View className="px-3">
+            {finance.map((e, i) => (
+              <React.Fragment key={e.key}>
+                <ListRow left={e.icon} title={e.title} chevron onPress={() => pushWithReturn(e.route)} />
+                {i < finance.length - 1 ? <Divider /> : null}
               </React.Fragment>
             ))}
           </View>

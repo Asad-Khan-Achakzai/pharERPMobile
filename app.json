@@ -19,66 +19,77 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
+      ],
+      "package": "com.asadkhanachakzie.pharmamobileapp"
     },
     "web": {
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
-    "plugins": [
-      "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
-          "dark": {
-            "backgroundColor": "#000000"
-          }
-        }
-      ],
-      "expo-secure-store",
-      "expo-sqlite",
-      "@sentry/react-native",
-      [
-        "expo-camera",
-        {
-          "cameraPermission": "Allow PharmaERP to take selfies and visit photos."
-        }
-      ],
-      [
-        "expo-location",
-        {
-          "locationAlwaysAndWhenInUsePermission": "Allow PharmaERP to use your location for attendance and visit verification."
-        }
-      ],
-      [
-        "expo-image-picker",
-        {
-          "photosPermission": "Allow PharmaERP to attach receipts and product photos."
-        }
-      ],
-      [
-        "expo-local-authentication",
-        {
-          "faceIDPermission": "Allow PharmaERP to use Face ID to unlock."
-        }
-      ],
-      "@react-native-community/datetimepicker"
-    ],
+ "plugins": [
+  "expo-router",
+  [
+    "expo-splash-screen",
+    {
+      "image": "./assets/images/splash-icon.png",
+      "imageWidth": 200,
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff",
+      "dark": {
+        "backgroundColor": "#000000"
+      }
+    }
+  ],
+  "expo-secure-store",
+  "expo-sqlite",
+  [
+    "expo-camera",
+    {
+      "cameraPermission": "Allow PharmaERP to take selfies and visit photos."
+    }
+  ],
+  [
+    "expo-location",
+    {
+      "locationAlwaysAndWhenInUsePermission": "Allow PharmaERP to use your location for attendance and visit verification."
+    }
+  ],
+  [
+    "expo-image-picker",
+    {
+      "photosPermission": "Allow PharmaERP to attach receipts and product photos."
+    }
+  ],
+  [
+    "expo-local-authentication",
+    {
+      "faceIDPermission": "Allow PharmaERP to use Face ID to unlock."
+    }
+  ],
+  "@react-native-community/datetimepicker"
+],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
     },
     "extra": {
-      "apiBaseUrl": "http://localhost:5000",
       "apiVersion": "v1",
       "enableMediaUpload": false,
       "enableVisitPhotos": false,
       "enableExpenseReceipts": false,
-      "enableProductMedia": false
+      "enableProductMedia": false,
+      "router": {},
+      "eas": {
+        "projectId": "fabc0660-de67-4083-8cc1-3e5342912e3c"
+      }
     }
   }
 }

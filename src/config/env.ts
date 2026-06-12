@@ -5,6 +5,8 @@
  */
 import Constants from 'expo-constants';
 
+import { API_BASE_URL } from '../../env.defaults';
+
 type Extra = {
   apiBaseUrl?: string;
   apiVersion?: string;
@@ -26,9 +28,9 @@ function bool(value: unknown, fallback: boolean): boolean {
 
 export const env = {
   apiBaseUrl:
-    // extra.apiBaseUrl ??
-    // process.env.EXPO_PUBLIC_API_BASE_URL ??
-    'http://192.168.100.247:5001',
+    extra.apiBaseUrl ??
+    process.env.EXPO_PUBLIC_API_BASE_URL ??
+    API_BASE_URL,
   apiVersion: extra.apiVersion ?? process.env.EXPO_PUBLIC_API_VERSION ?? 'v1',
   sentryDsn: extra.sentryDsn ?? process.env.EXPO_PUBLIC_SENTRY_DSN,
   buildChannel:

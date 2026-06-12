@@ -5,7 +5,9 @@ import { env } from '@/config/env';
 import { secureStore } from '@/data/secureStore';
 import { useAuthStore } from '@/state/authStore';
 
-const BASE_URL = `${env.apiBaseUrl.replace(/\/$/, '')}/api/${env.apiVersion}`;
+function getBaseUrl(): string {
+  return `${env.apiBaseUrl.replace(/\/$/, '')}/api/${env.apiVersion}`;
+}
 
 let cachedDeviceId: string | null = null;
 async function getOrCreateDeviceId(): Promise<string> {
@@ -42,7 +44,7 @@ export class ApiError extends Error {
 
 function buildClient(): AxiosInstance {
   const instance = axios.create({
-    baseURL: BASE_URL,
+    baseURL: getBaseUrl(),
     timeout: 25000,
     headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
   });
@@ -73,7 +75,7 @@ function buildClient(): AxiosInstance {
       try {
         const deviceId = await getOrCreateDeviceId();
         const r = await axios.post(
-          `${BASE_URL}/auth/mobile/refresh`,
+          `${getBaseUrl()}/auth/mobile/refresh`,
           { refreshToken, deviceId },
           { timeout: 15000 },
         );
@@ -121,14 +123,16 @@ function buildClient(): AxiosInstance {
         error?: { message?: string; code?: string };
         code?: string;
       };
+      const isNetworkFailure = !error.response && error.code === 'ERR_NETWORK';
       throw new ApiError({
         status,
         code: payload.code ?? payload.error?.code,
-        message:
-          payload.message ??
-          payload.error?.message ??
-          error.message ??
-          'Request failed',
+        message: isNetworkFailure
+          ? `Cannot reach backend at ${env.apiBaseUrl}. Use your Mac's LAN IP in env.defaults.js, keep phone on the same Wi‑Fi, and ensure the backend is running on port 5001.`
+          : (payload.message ??
+            payload.error?.message ??
+            error.message ??
+            'Request failed'),
         details: error.response?.data,
       });
     },

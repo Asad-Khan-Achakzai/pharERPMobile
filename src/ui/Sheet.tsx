@@ -100,7 +100,7 @@ export const Sheet: React.FC<SheetProps> = ({
       </View>
     ) : null;
 
-  const scrollPadding = footer ? 'pb-4' : 'pb-8';
+  const footerReserve = footer ? 76 + insets.bottom : 0;
 
   return (
     <View style={styles.host} pointerEvents={open ? 'box-none' : 'none'}>
@@ -118,13 +118,20 @@ export const Sheet: React.FC<SheetProps> = ({
         {header}
         {scrollable ? (
           <BottomSheetScrollView
-            contentContainerClassName={cn('px-4', scrollPadding, className)}
+            enableFooterMarginAdjustment={Boolean(footer)}
+            contentContainerClassName={cn('px-4', className)}
+            contentContainerStyle={{
+              paddingBottom: footer ? footerReserve : 32,
+            }}
             keyboardShouldPersistTaps="handled"
           >
             {children}
           </BottomSheetScrollView>
         ) : (
-          <BottomSheetView className={cn('px-4 flex-1', scrollPadding, className)}>
+          <BottomSheetView
+            className={cn('px-4 flex-1', className)}
+            style={{ paddingBottom: footer ? footerReserve : 32 }}
+          >
             {children}
           </BottomSheetView>
         )}
