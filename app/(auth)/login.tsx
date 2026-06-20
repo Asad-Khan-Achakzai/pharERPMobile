@@ -11,9 +11,11 @@ import { authApi } from '@/api/auth';
 import { syncApi } from '@/api/sync';
 import { syncMasterDataAfterLogin } from '@/hooks/useMasterDataSync';
 import { useAuthStore } from '@/state/authStore';
+import { useThemedIcons } from '@/hooks/useThemedIcons';
 
 export default function LoginScreen() {
   const toast = useToast();
+  const icons = useThemedIcons();
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [showPw, setShowPw] = React.useState(false);
@@ -42,14 +44,15 @@ export default function LoginScreen() {
         accessToken: resp.accessToken,
         refreshToken: resp.refreshToken,
       });
+
+      const { schedulePushRegistration } = await import('@/features/push/registerPush');
+      void schedulePushRegistration(1500);
+
       try {
         const cfg = await syncApi.getServerConfig();
         await useAuthStore.getState().setServerConfig(cfg);
-        const { registerPushNotifications } = await import('@/features/push/registerPush');
-        void registerPushNotifications();
         void syncMasterDataAfterLogin(true);
       } catch {
-        /* server-config is best-effort; UI falls back to env defaults */
         void syncMasterDataAfterLogin(false);
       }
       /**
@@ -110,9 +113,9 @@ export default function LoginScreen() {
         placeholder="Enter password"
         rightIcon={
           showPw ? (
-            <EyeOff size={18} color="#64748b" />
+            <EyeOff size={18} color={icons.muted} />
           ) : (
-            <Eye size={18} color="#64748b" />
+            <Eye size={18} color={icons.muted} />
           )
         }
         onRightIconPress={() => setShowPw((v) => !v)}

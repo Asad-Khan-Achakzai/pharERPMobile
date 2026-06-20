@@ -15,6 +15,7 @@ import * as React from 'react';
 import { View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { FormScreen } from '@/ui/FormScreen';
 import { Screen } from '@/ui/Screen';
 import { Header } from '@/ui/Header';
 import { Card } from '@/ui/Card';
@@ -22,8 +23,7 @@ import { TextField } from '@/ui/TextField';
 import { Button } from '@/ui/Button';
 import { Text } from '@/ui/Text';
 import { Switch } from '@/ui/Switch';
-import { SkeletonRow } from '@/ui/Skeleton';
-import { StickyActionBar } from '@/ui/StickyActionBar';
+import { FormFieldsCardSkeleton } from '@/ui/listCardSkeletons';
 import { useToast } from '@/ui/Toast';
 import { masterQueries } from '@/data/masterQueries';
 import { doctorsApi } from '@/api/doctors';
@@ -160,16 +160,27 @@ function EditDoctorImpl() {
 
   if (q.isLoading || !draft || !initial) {
     return (
-      <Screen padded>
-        <SkeletonRow count={6} />
+      <Screen padded={false} edges={['bottom']}>
+        <Header back title="Edit doctor" />
+        <FormFieldsCardSkeleton fields={6} />
       </Screen>
     );
   }
 
   return (
-    <Screen padded={false} keyboardAvoid>
-      <Header back title="Edit doctor" subtitle={initial.name} />
-
+    <FormScreen
+      header={<Header back title="Edit doctor" subtitle={initial.name} />}
+      footer={
+        <Button
+          onPress={() => update.mutate()}
+          loading={update.isPending}
+          disabled={!dirty}
+          fullWidth
+        >
+          Save changes
+        </Button>
+      }
+    >
       <Card className="mx-4 mt-2">
         <TextField
           label="Name"
@@ -280,20 +291,7 @@ function EditDoctorImpl() {
           />
         </View>
       </Card>
-
-      <View style={{ height: 12 }} />
-
-      <StickyActionBar>
-        <Button
-          onPress={() => update.mutate()}
-          loading={update.isPending}
-          disabled={!dirty}
-          fullWidth
-        >
-          Save changes
-        </Button>
-      </StickyActionBar>
-    </Screen>
+    </FormScreen>
   );
 }
 

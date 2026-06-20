@@ -1,13 +1,16 @@
 import * as React from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, View, type ViewStyle } from 'react-native';
 import { Plus } from 'lucide-react-native';
 import { cn } from '@/utils/cn';
+import { useTabBarLayout } from '@/navigation/useTabBarLayout';
 
 interface FABProps {
   onPress: () => void;
   icon?: React.ReactNode;
   className?: string;
   accessibilityLabel?: string;
+  /** Extra offset when no tab bar is present (e.g. stack screens). */
+  bottomOffset?: number;
 }
 
 export const FAB: React.FC<FABProps> = ({
@@ -15,8 +18,16 @@ export const FAB: React.FC<FABProps> = ({
   icon,
   className,
   accessibilityLabel,
-}) => (
-  <View pointerEvents="box-none" className="absolute right-4 bottom-6">
+  bottomOffset,
+}) => {
+  const { fabOffset } = useTabBarLayout();
+  const bottom = bottomOffset ?? fabOffset;
+
+  return (
+  <View
+    pointerEvents="box-none"
+    style={{ position: 'absolute', right: 16, bottom } as ViewStyle}
+  >
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? 'Action'}
@@ -29,4 +40,5 @@ export const FAB: React.FC<FABProps> = ({
       {icon ?? <Plus size={24} color="#ffffff" />}
     </Pressable>
   </View>
-);
+  );
+};

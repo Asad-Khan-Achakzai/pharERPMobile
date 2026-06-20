@@ -1,13 +1,15 @@
 import * as React from 'react';
-import { View, Pressable, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { format, isValid, parse } from 'date-fns';
 import { Sheet } from '@/ui/Sheet';
 import { Text } from '@/ui/Text';
 import { DatePickerField } from '@/ui/DatePickerField';
 import { Button } from '@/ui/Button';
+import { FilterOption } from '@/ui/FilterOption';
+import { FilterSelectionBar } from '@/ui/FilterSelectionBar';
+import { useTheme } from '@/theme/ThemeProvider';
 import { accountsApi } from '@/api/accounts';
-import { cn } from '@/utils/cn';
 
 function normalizeDateInput(value: string): string {
   const trimmed = value.trim();
@@ -58,6 +60,7 @@ export const GeneralLedgerFilterSheet: React.FC<GeneralLedgerFilterSheetProps> =
   value,
   onApply,
 }) => {
+  const { colors } = useTheme();
   const [draft, setDraft] = React.useState<GeneralLedgerFilters>(value);
 
   const accounts = useQuery({
@@ -132,43 +135,31 @@ export const GeneralLedgerFilterSheet: React.FC<GeneralLedgerFilterSheetProps> =
         Account
       </Text>
       {draft.accountId ? (
-        <View className="flex-row items-center justify-between rounded-xl border border-border bg-muted px-3 py-2 mb-2">
-          <Text size="sm" className="flex-1 pr-2" numberOfLines={2}>
-            {draft.accountLabel ?? 'Account'}
-          </Text>
-          <Button
-            variant="ghost"
-            size="sm"
-            onPress={() =>
-              setDraft((d) => ({ ...d, accountId: '', accountLabel: undefined }))
-            }
-          >
-            Clear
-          </Button>
-        </View>
+        <FilterSelectionBar
+          label={draft.accountLabel ?? 'Account'}
+          onClear={() =>
+            setDraft((d) => ({ ...d, accountId: '', accountLabel: undefined }))
+          }
+        />
       ) : null}
 
-      <Pressable
+      <FilterOption
+        label="All accounts"
+        selected={!draft.accountId}
         onPress={() => setDraft((d) => ({ ...d, accountId: '', accountLabel: undefined }))}
-        className={cn(
-          'rounded-xl border px-3 py-2.5 mb-2',
-          !draft.accountId ? 'border-primary bg-primary/5' : 'border-border',
-        )}
-      >
-        <Text size="sm" weight={!draft.accountId ? 'semibold' : 'medium'}>
-          All accounts
-        </Text>
-      </Pressable>
+      />
 
       {accounts.isLoading ? (
-        <ActivityIndicator className="my-3" />
+        <ActivityIndicator color={colors.primary} className="my-3" />
       ) : (
         (accounts.data ?? []).map((a) => {
           const selected = draft.accountId === a._id;
           const label = `${a.code} · ${a.name}`;
           return (
-            <Pressable
+            <FilterOption
               key={a._id}
+              label={label}
+              selected={selected}
               onPress={() =>
                 setDraft((d) => ({
                   ...d,
@@ -176,15 +167,7 @@ export const GeneralLedgerFilterSheet: React.FC<GeneralLedgerFilterSheetProps> =
                   accountLabel: label,
                 }))
               }
-              className={cn(
-                'rounded-xl border px-3 py-2.5 mb-2',
-                selected ? 'border-primary bg-primary/5' : 'border-border',
-              )}
-            >
-              <Text size="sm" weight={selected ? 'semibold' : 'medium'}>
-                {label}
-              </Text>
-            </Pressable>
+            />
           );
         })
       )}

@@ -9,8 +9,8 @@ import { PressableCard } from '@/ui/Card';
 import { Text } from '@/ui/Text';
 import { Avatar } from '@/ui/Avatar';
 import { Badge } from '@/ui/Badge';
-import { SkeletonRow } from '@/ui/Skeleton';
-import { EmptyState } from '@/ui/EmptyState';
+import { ListSkeletonList } from '@/ui/listCardSkeletons';
+import { EmptyState, ThemedEmptyIcon } from '@/ui/EmptyState';
 import { FAB } from '@/ui/FAB';
 import { masterQueries } from '@/data/masterQueries';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -31,16 +31,14 @@ export default function DoctorsScreen() {
   return (
     <Screen padded={false} scroll={false}>
       <Header title="Doctors" />
-      <View className="px-4 pb-2">
+      <View className="px-4 pt-2 pb-2">
         <SearchField value={q} onChangeText={setQ} placeholder="Search by name, city" />
       </View>
       {list.isLoading ? (
-        <View className="px-4">
-          <SkeletonRow count={6} />
-        </View>
+        <ListSkeletonList count={6} variant="avatar" className="px-4" />
       ) : (list.data?.items ?? []).length === 0 ? (
         <EmptyState
-          icon={<Users size={28} color="#94a3b8" />}
+          icon={<ThemedEmptyIcon Icon={Users} />}
           title="No doctors yet"
           description="Add your first doctor or sync your territory roster from the web app."
         />

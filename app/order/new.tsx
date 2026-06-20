@@ -37,7 +37,7 @@ import { NumberStepper } from '@/ui/NumberStepper';
 import { ListRow, Divider } from '@/ui/ListRow';
 import { Badge } from '@/ui/Badge';
 import { StickyActionBar } from '@/ui/StickyActionBar';
-import { SkeletonRow } from '@/ui/Skeleton';
+import { ListSkeletonList } from '@/ui/listCardSkeletons';
 import { useToast } from '@/ui/Toast';
 import { masterQueries } from '@/data/masterQueries';
 import { distributorsApi } from '@/api/products';
@@ -346,8 +346,8 @@ function NewOrderImpl() {
       />
 
       {step === 'parties' ? (
-        <Screen padded={false} scroll={false}>
-          <Card className="mx-4 mt-2">
+        <Screen padded={false} scroll={false} edges={['bottom']}>
+          <Card className="mx-4 mt-1">
             <Label>Pharmacy</Label>
             {pharmacy ? (
               <View className="flex-row items-center justify-between mt-1">
@@ -404,7 +404,7 @@ function NewOrderImpl() {
               {doctorQ.trim().length >= 1 ? (
                 doctorSearch.isLoading ? (
                   <View className="mt-2">
-                    <SkeletonRow count={2} />
+                    <ListSkeletonList count={2} variant="avatar" className="px-0 pt-2" />
                   </View>
                 ) : (doctorSearch.data ?? []).length === 0 ? (
                   <Text size="sm" tone="muted" className="mt-2">
@@ -431,9 +431,7 @@ function NewOrderImpl() {
                   </View>
                 )
               ) : pharmacyDoctors.isLoading ? (
-                <View className="mt-2">
-                  <SkeletonRow count={2} />
-                </View>
+                <ListSkeletonList count={2} variant="avatar" className="px-0 pt-2" />
               ) : (pharmacyDoctors.data ?? []).length === 0 ? (
                 <Text size="sm" tone="muted" className="mt-2">
                   No doctors are linked to this pharmacy yet. Use the search above
@@ -475,7 +473,7 @@ function NewOrderImpl() {
                   </Button>
                 </View>
               ) : distributors.isLoading ? (
-                <SkeletonRow count={2} />
+                <ListSkeletonList count={2} variant="split" className="px-0 pt-2" />
               ) : (
                 <View>
                   {(distributors.data ?? []).slice(0, 8).map((d, i) => (
@@ -489,7 +487,7 @@ function NewOrderImpl() {
             </Card>
           ) : pharmacies.isLoading ? (
             <View className="px-4 mt-2">
-              <SkeletonRow count={4} />
+              <ListSkeletonList count={4} variant="split" className="px-4 mt-2" />
             </View>
           ) : (pharmacies.data ?? []).length === 0 ? null : (
             <FlatList
@@ -534,7 +532,7 @@ function NewOrderImpl() {
       ) : null}
 
       {step === 'items' ? (
-        <Screen padded={false} scroll={false}>
+        <Screen padded={false} scroll={false} edges={['bottom']}>
           <View className="px-4 pb-2">
             <SearchField
               value={productsQ}
@@ -544,7 +542,7 @@ function NewOrderImpl() {
           </View>
           {productsList.isLoading ? (
             <View className="px-4">
-              <SkeletonRow count={6} />
+              <ListSkeletonList count={6} variant="split" className="px-4" />
             </View>
           ) : (
             <FlatList
@@ -643,7 +641,7 @@ function NewOrderImpl() {
       ) : null}
 
       {step === 'review' ? (
-        <Screen padded={false}>
+        <Screen padded={false} edges={['bottom']}>
           <Card className="mx-4 mt-2">
             <Label>Parties</Label>
             <Text size="base" weight="semibold" className="mt-1">

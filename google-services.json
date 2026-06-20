@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "757150808978",
+    "project_id": "pharmerp-272e4",
+    "storage_bucket": "pharmerp-272e4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:757150808978:android:d8807474bd4f51c5409f4b",
+        "android_client_info": {
+          "package_name": "com.asadkhanachakzie.pharmamobileapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDAOcyS9LZG9mVEFgUSpgzf0IyYdFvPuWg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

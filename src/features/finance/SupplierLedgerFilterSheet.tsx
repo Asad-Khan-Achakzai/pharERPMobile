@@ -6,6 +6,8 @@ import { Text } from '@/ui/Text';
 import { DatePickerField } from '@/ui/DatePickerField';
 import { SearchField } from '@/ui/SearchField';
 import { Button } from '@/ui/Button';
+import { FilterSelectionBar } from '@/ui/FilterSelectionBar';
+import { useTheme } from '@/theme/ThemeProvider';
 import { suppliersApi, type Supplier } from '@/api/suppliers';
 import type { ID } from '@/domain/types';
 
@@ -58,6 +60,7 @@ export const SupplierLedgerFilterSheet: React.FC<SupplierLedgerFilterSheetProps>
   value,
   onApply,
 }) => {
+  const { colors } = useTheme();
   const [draft, setDraft] = React.useState<SupplierLedgerFilters>(value);
   const [search, setSearch] = React.useState('');
   const [hits, setHits] = React.useState<Supplier[]>([]);
@@ -125,32 +128,18 @@ export const SupplierLedgerFilterSheet: React.FC<SupplierLedgerFilterSheetProps>
         Supplier
       </Text>
       {draft.supplierId ? (
-        <View className="flex-row items-center justify-between rounded-xl border border-border bg-muted px-3 py-2 mb-2">
-          <View className="flex-1 pr-2">
-            <Text size="sm" weight="medium" numberOfLines={1}>
-              {draft.supplierName ?? 'Supplier'}
-            </Text>
-            {draft.supplierCity ? (
-              <Text size="xs" tone="muted">
-                {draft.supplierCity}
-              </Text>
-            ) : null}
-          </View>
-          <Button
-            variant="ghost"
-            size="sm"
-            onPress={() =>
-              setDraft((d) => ({
-                ...d,
-                supplierId: undefined,
-                supplierName: undefined,
-                supplierCity: undefined,
-              }))
-            }
-          >
-            Clear
-          </Button>
-        </View>
+        <FilterSelectionBar
+          label={draft.supplierName ?? 'Supplier'}
+          subtitle={draft.supplierCity}
+          onClear={() =>
+            setDraft((d) => ({
+              ...d,
+              supplierId: undefined,
+              supplierName: undefined,
+              supplierCity: undefined,
+            }))
+          }
+        />
       ) : null}
       <SearchField
         value={search}
@@ -158,7 +147,7 @@ export const SupplierLedgerFilterSheet: React.FC<SupplierLedgerFilterSheetProps>
         placeholder="Search supplier…"
       />
       {loading ? (
-        <ActivityIndicator className="my-3" />
+        <ActivityIndicator color={colors.primary} className="my-3" />
       ) : (
         hits.map((s) => (
           <Pressable
@@ -173,7 +162,8 @@ export const SupplierLedgerFilterSheet: React.FC<SupplierLedgerFilterSheetProps>
               setSearch('');
               setHits([]);
             }}
-            className="py-2 border-b border-border"
+            className="py-2 border-b"
+            style={{ borderBottomColor: colors.border }}
           >
             <Text size="sm" weight="medium">
               {s.name}

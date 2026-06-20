@@ -15,7 +15,7 @@ import * as React from 'react';
 import { ShieldOff } from 'lucide-react-native';
 import { Screen } from '@/ui/Screen';
 import { Header } from '@/ui/Header';
-import { EmptyState } from '@/ui/EmptyState';
+import { EmptyState, ThemedEmptyIcon } from '@/ui/EmptyState';
 import { usePermissions } from '@/hooks/usePermissions';
 import {
   SCREEN_PERMISSIONS,
@@ -68,7 +68,7 @@ export const PermissionGate: React.FC<GateProps> = (props) => {
     <Screen padded={false} scroll={false}>
       <Header back={props.back ?? true} title={props.title ?? 'Access denied'} />
       <EmptyState
-        icon={<ShieldOff size={28} color="#94a3b8" />}
+        icon={<ThemedEmptyIcon Icon={ShieldOff} />}
         title="You don't have access"
         description={
           screenLabel

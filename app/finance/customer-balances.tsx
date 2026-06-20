@@ -6,7 +6,7 @@ import { Screen } from '@/ui/Screen';
 import { Header } from '@/ui/Header';
 import { Card } from '@/ui/Card';
 import { Text } from '@/ui/Text';
-import { SkeletonRow } from '@/ui/Skeleton';
+import { ListSkeletonList } from '@/ui/listCardSkeletons';
 import { EmptyState } from '@/ui/EmptyState';
 import { PermissionGate } from '@/auth/PermissionGate';
 import { ledgerApi } from '@/api/ledger';
@@ -21,9 +21,7 @@ function CustomerBalancesImpl() {
     <Screen padded={false} scroll={false}>
       <Header back title="Customer balances" subtitle="Pharmacy ledger summary" />
       {list.isLoading ? (
-        <View className="px-4">
-          <SkeletonRow count={6} />
-        </View>
+        <ListSkeletonList count={6} variant="ledger" />
       ) : (list.data ?? []).length === 0 ? (
         <EmptyState title="No ledger entries" description="Customer balances will appear here." />
       ) : (

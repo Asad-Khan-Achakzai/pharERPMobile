@@ -11,6 +11,7 @@ import BottomSheet, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from './Text';
 import { cn } from '@/utils/cn';
+import { useTheme } from '@/theme/ThemeProvider';
 
 interface SheetProps {
   open: boolean;
@@ -40,6 +41,7 @@ export const Sheet: React.FC<SheetProps> = ({
 }) => {
   const ref = React.useRef<BottomSheet>(null);
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const snapKey = snapPoints.join('|');
   const memoSnapPoints = React.useMemo(() => snapPoints, [snapKey]);
   const snapIndex =
@@ -76,12 +78,15 @@ export const Sheet: React.FC<SheetProps> = ({
     (props: BottomSheetFooterProps) =>
       footer ? (
         <BottomSheetFooter {...props} bottomInset={insets.bottom}>
-          <View className="px-4 pt-2 pb-2 bg-background border-t border-border">
+          <View
+            className="px-4 pt-2 pb-2 border-t"
+            style={{ backgroundColor: colors.card, borderTopColor: colors.border }}
+          >
             {footer}
           </View>
         </BottomSheetFooter>
       ) : null,
-    [footer, insets.bottom],
+    [footer, insets.bottom, colors.card, colors.border],
   );
 
   const header =
@@ -112,8 +117,8 @@ export const Sheet: React.FC<SheetProps> = ({
         onClose={handleSheetClose}
         backdropComponent={renderBackdrop}
         footerComponent={footer ? renderFooter : undefined}
-        backgroundStyle={{ backgroundColor: '#ffffff' }}
-        handleIndicatorStyle={{ backgroundColor: '#cbd5e1' }}
+        backgroundStyle={{ backgroundColor: colors.card }}
+        handleIndicatorStyle={{ backgroundColor: colors.border }}
       >
         {header}
         {scrollable ? (

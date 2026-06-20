@@ -3,6 +3,7 @@ import { Pressable, View } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
 import { Text } from './Text';
 import { cn } from '@/utils/cn';
+import { useTheme } from '@/theme/ThemeProvider';
 
 interface ListRowProps {
   title: string;
@@ -25,6 +26,8 @@ export const ListRow: React.FC<ListRowProps> = ({
   chevron,
   className,
 }) => {
+  const { colors } = useTheme();
+
   const inner = (
     <>
       {left ? <View className="mr-3">{left}</View> : null}
@@ -42,7 +45,7 @@ export const ListRow: React.FC<ListRowProps> = ({
       {right ? <View className="ml-3">{right}</View> : null}
       {chevron ? (
         <View className="ml-2">
-          <ChevronRight size={18} color="#94a3b8" />
+          <ChevronRight size={18} color={colors.mutedForeground} />
         </View>
       ) : null}
     </>
@@ -57,7 +60,7 @@ export const ListRow: React.FC<ListRowProps> = ({
   return (
     <Pressable
       onPress={onPress}
-      android_ripple={{ color: '#e2e8f0' }}
+      android_ripple={{ color: colors.border }}
       className={cn('flex-row items-center py-3 active:bg-muted', className)}
     >
       {inner}

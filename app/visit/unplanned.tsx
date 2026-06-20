@@ -8,7 +8,7 @@ import { PressableCard } from '@/ui/Card';
 import { Text, Label } from '@/ui/Text';
 import { Badge } from '@/ui/Badge';
 import { Avatar } from '@/ui/Avatar';
-import { SkeletonRow } from '@/ui/Skeleton';
+import { ListSkeletonList } from '@/ui/listCardSkeletons';
 import { masterQueries } from '@/data/masterQueries';
 import { PermissionGate } from '@/auth/PermissionGate';
 import { useRecommendedDoctors } from '@/hooks/useRecommendedDoctors';
@@ -105,7 +105,7 @@ function UnplannedVisitPickerImpl() {
       {searchEnabled ? (
         lookupQ.isLoading ? (
           <View className="px-4 pt-3">
-            <SkeletonRow count={4} />
+            <ListSkeletonList count={4} variant="avatar" />
           </View>
         ) : (
           <SectionList
@@ -143,9 +143,7 @@ function UnplannedVisitPickerImpl() {
           />
         )
       ) : rec.prefetchLoading ? (
-        <View className="px-4 pt-3">
-          <SkeletonRow count={4} />
-        </View>
+        <ListSkeletonList count={4} variant="avatar" className="px-4 pt-3" />
       ) : browseSections.length > 0 ? (
         <SectionList
           className="flex-1"

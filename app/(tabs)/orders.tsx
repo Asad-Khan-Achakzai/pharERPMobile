@@ -10,14 +10,15 @@ import { PressableCard } from '@/ui/Card';
 import { Text } from '@/ui/Text';
 import { Badge } from '@/ui/Badge';
 import { Button } from '@/ui/Button';
-import { SkeletonRow } from '@/ui/Skeleton';
-import { EmptyState } from '@/ui/EmptyState';
+import { ListSkeletonList } from '@/ui/listCardSkeletons';
+import { EmptyState, ThemedEmptyIcon } from '@/ui/EmptyState';
 import { FAB } from '@/ui/FAB';
 import { ordersQueries } from '@/data/ordersQueries';
 import { SyncStatusBadge } from '@/ui/SyncStatusBadge';
 import type { SyncUiState } from '@/data/localEntities';
 import { usePermissions } from '@/hooks/usePermissions';
 import { usePushWithReturn } from '@/navigation/usePushWithReturn';
+import { useThemedIcons } from '@/hooks/useThemedIcons';
 import {
   OrdersFilterSheet,
   emptyOrderFilters,
@@ -56,6 +57,7 @@ function countActiveFilters(filters: OrderListFilters): number {
 }
 
 export default function OrdersScreen() {
+  const icons = useThemedIcons();
   const { canDo, can } = usePermissions();
   const canCreate = canDo('order_create');
   const canFilterByRep = can('team.viewAllReports') || can('admin.access');
@@ -101,13 +103,13 @@ export default function OrdersScreen() {
             variant="ghost"
             size="sm"
             onPress={() => setFilterOpen(true)}
-            leftIcon={<SlidersHorizontal size={16} color="#0f172a" />}
+            leftIcon={<SlidersHorizontal size={16} color={icons.foreground} />}
           >
             {activeFilterCount > 0 ? `Filters (${activeFilterCount})` : 'Filters'}
           </Button>
         }
       />
-      <View className="px-4 pb-2">
+      <View className="px-4 pt-2 pb-2">
         <SearchField
           value={search}
           onChangeText={setSearch}
@@ -115,12 +117,10 @@ export default function OrdersScreen() {
         />
       </View>
       {list.isLoading ? (
-        <View className="px-4">
-          <SkeletonRow count={6} />
-        </View>
+        <ListSkeletonList count={6} variant="split" className="px-4 pt-2" />
       ) : items.length === 0 ? (
         <EmptyState
-          icon={<ShoppingBag size={28} color="#94a3b8" />}
+          icon={<ThemedEmptyIcon Icon={ShoppingBag} />}
           title="No orders yet"
           description={
             debouncedSearch || activeFilterCount > 0

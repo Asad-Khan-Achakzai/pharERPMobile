@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Text as RNText, TextProps } from 'react-native';
+import { Text as RNText, TextProps, TextStyle } from 'react-native';
 import { cn } from '@/utils/cn';
 import { useTheme } from '@/theme/ThemeProvider';
 
@@ -44,26 +44,6 @@ const weightClass: Record<TextWeight, string> = {
   bold: 'font-bold',
 };
 
-const toneClass: Record<TextTone, string> = {
-  default: 'text-slate-900',
-  muted: 'text-slate-500',
-  inverse: 'text-white',
-  primary: 'text-primary',
-  danger: 'text-destructive',
-  success: 'text-success',
-  warning: 'text-warning',
-};
-
-const toneClassDark: Record<TextTone, string> = {
-  default: 'text-slate-50',
-  muted: 'text-slate-400',
-  inverse: 'text-slate-900',
-  primary: 'text-primary',
-  danger: 'text-destructive',
-  success: 'text-success',
-  warning: 'text-warning',
-};
-
 export interface AppTextProps extends TextProps {
   size?: TextSize;
   weight?: TextWeight;
@@ -76,14 +56,26 @@ export const Text: React.FC<AppTextProps> = ({
   weight = 'normal',
   tone = 'default',
   className,
+  style,
   ...rest
 }) => {
-  const { resolved } = useTheme();
-  const tones = resolved === 'dark' ? toneClassDark : toneClass;
+  const { colors } = useTheme();
+
+  const toneColor: Record<TextTone, string> = {
+    default: colors.foreground,
+    muted: colors.mutedForeground,
+    inverse: colors.primaryForeground,
+    primary: colors.primary,
+    danger: colors.destructive,
+    success: colors.success,
+    warning: colors.warning,
+  };
+
   return (
     <RNText
       {...rest}
-      className={cn(sizeClass[size], weightClass[weight], tones[tone], className)}
+      className={cn(sizeClass[size], weightClass[weight], className)}
+      style={[{ color: toneColor[tone] }, style as TextStyle]}
     />
   );
 };

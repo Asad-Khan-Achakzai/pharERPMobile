@@ -6,7 +6,7 @@ import { PermissionGate } from '@/auth/PermissionGate';
 import { ActiveVisitScreen } from '@/features/visit/ActiveVisitScreen';
 import { masterQueries } from '@/data/masterQueries';
 import { Screen } from '@/ui/Screen';
-import { SkeletonRow } from '@/ui/Skeleton';
+import { ListSkeletonList } from '@/ui/listCardSkeletons';
 
 export default function VisitScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -17,8 +17,8 @@ export default function VisitScreen() {
   const item = today.data?.items.find((p) => p._id === id);
   if (today.isLoading || !item) {
     return (
-      <Screen padded>
-        <SkeletonRow count={5} />
+      <Screen padded={false} edges={['bottom']}>
+        <ListSkeletonList count={4} variant="visit" className="px-4 pt-4" />
       </Screen>
     );
   }

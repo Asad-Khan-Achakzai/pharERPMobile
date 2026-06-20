@@ -8,9 +8,8 @@ import { Card } from '@/ui/Card';
 import { Text, H2, Subtitle, Label } from '@/ui/Text';
 import { Avatar } from '@/ui/Avatar';
 import { Badge } from '@/ui/Badge';
-import { SkeletonRow } from '@/ui/Skeleton';
+import { ManagerDashboardSkeleton } from '@/ui/listCardSkeletons';
 import { EmptyState } from '@/ui/EmptyState';
-import { OutboxFooter } from '@/features/sync/OutboxFooter';
 import { dashboardApi } from '@/api/dashboard';
 import { useAuthStore } from '@/state/authStore';
 
@@ -23,12 +22,9 @@ export default function ManagerHome() {
 
   return (
     <Screen padded={false} refreshing={q.isRefetching} onRefresh={() => q.refetch()}>
-      <Header title={user?.name ?? 'Manager'} subtitle="Team overview" />
-      <OutboxFooter />
+      <Header back title={user?.name ?? 'Manager'} subtitle="Team overview" />
       {q.isLoading ? (
-        <View className="px-4">
-          <SkeletonRow count={3} />
-        </View>
+        <ManagerDashboardSkeleton />
       ) : (
         <>
           <View className="px-4 flex-row">

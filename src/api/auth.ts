@@ -71,8 +71,6 @@ export const authApi = {
 
   async updatePushToken(pushToken: string): Promise<void> {
     const deviceId = await getOrCreateDeviceId();
-    await api
-      .post('/auth/mobile/push-token', { deviceId, pushToken })
-      .catch(() => undefined);
+    await api.post('/auth/mobile/push-token', { deviceId, pushToken });
   },
 };

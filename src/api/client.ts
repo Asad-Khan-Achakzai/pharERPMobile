@@ -128,7 +128,7 @@ function buildClient(): AxiosInstance {
         status,
         code: payload.code ?? payload.error?.code,
         message: isNetworkFailure
-          ? `Cannot reach backend at ${env.apiBaseUrl}. Use your Mac's LAN IP in env.defaults.js, keep phone on the same Wi‑Fi, and ensure the backend is running on port 5001.`
+          ? `Cannot reach backend at ${env.apiBaseUrl}. On a physical device use your Mac LAN IP in env.defaults.js (same Wi‑Fi). On Android emulator the app uses 10.0.2.2 automatically — ensure the backend is running on port 5001.`
           : (payload.message ??
             payload.error?.message ??
             error.message ??

@@ -7,6 +7,7 @@ import { format, parse, isValid } from 'date-fns';
 import { Calendar } from 'lucide-react-native';
 import { Text } from './Text';
 import { cn } from '@/utils/cn';
+import { useTheme } from '@/theme/ThemeProvider';
 
 interface DatePickerFieldProps {
   label?: string;
@@ -41,10 +42,9 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
   className,
   minimumDate,
 }) => {
+  const { colors, resolved } = useTheme();
   const [open, setOpen] = React.useState(false);
   const pickerDate = React.useMemo(() => parseDateValue(value), [value]);
-  const pickerBackground = '#ffffff';
-  const pickerTextColor = '#0f172a';
 
   const displayLabel = React.useMemo(() => {
     if (!value.trim()) return placeholder;
@@ -78,12 +78,13 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
         accessibilityRole="button"
         accessibilityLabel={label ? `${label}, ${displayLabel}` : displayLabel}
         onPress={() => setOpen((v) => !v)}
-        className={cn(
-          'flex-row items-center rounded-xl border border-input bg-input-background px-3 py-3',
-          open ? 'border-primary' : '',
-        )}
+        className="flex-row items-center rounded-xl border px-3 py-3"
+        style={{
+          backgroundColor: colors.inputBackground,
+          borderColor: open ? colors.primary : colors.input,
+        }}
       >
-        <Calendar size={18} color="#64748b" />
+        <Calendar size={18} color={colors.mutedForeground} />
         <Text
           size="base"
           className="flex-1 ml-2"
@@ -109,8 +110,8 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
 
       {open && Platform.OS === 'ios' ? (
         <View
-          className="mt-2 rounded-xl border border-border overflow-hidden"
-          style={{ backgroundColor: pickerBackground }}
+          className="mt-2 rounded-xl border overflow-hidden"
+          style={{ backgroundColor: colors.card, borderColor: colors.border }}
         >
           <DateTimePicker
             value={pickerDate}
@@ -118,19 +119,19 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
             display="spinner"
             minimumDate={minimumDate}
             onChange={onPickerChange}
-            themeVariant="light"
-            textColor={pickerTextColor}
-            accentColor="#2563eb"
+            themeVariant={resolved}
+            textColor={colors.foreground}
+            accentColor={colors.primary}
             style={{
               width: '100%',
               height: 216,
-              backgroundColor: pickerBackground,
+              backgroundColor: colors.card,
             }}
           />
           <Pressable
             onPress={() => setOpen(false)}
-            className="py-2.5 items-center border-t border-border"
-            style={{ backgroundColor: pickerBackground }}
+            className="py-2.5 items-center border-t"
+            style={{ backgroundColor: colors.card, borderTopColor: colors.border }}
           >
             <Text size="sm" weight="semibold" tone="primary">
               Done

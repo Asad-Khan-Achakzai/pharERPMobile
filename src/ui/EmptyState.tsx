@@ -1,8 +1,22 @@
 import * as React from 'react';
 import { View } from 'react-native';
+import type { LucideIcon } from 'lucide-react-native';
 import { Text } from './Text';
 import { Button } from './Button';
 import { cn } from '@/utils/cn';
+import { useTheme } from '@/theme/ThemeProvider';
+
+/** Theme-aware icon for empty / placeholder states. */
+export function ThemedEmptyIcon({
+  Icon,
+  size = 28,
+}: {
+  Icon: LucideIcon;
+  size?: number;
+}) {
+  const { colors } = useTheme();
+  return <Icon size={size} color={colors.mutedForeground} />;
+}
 
 interface EmptyStateProps {
   icon?: React.ReactNode;

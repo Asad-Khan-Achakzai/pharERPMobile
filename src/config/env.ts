@@ -3,7 +3,9 @@
  * Optional Backend Capability" rule: media is OFF until backend confirms via
  * /sync/server-config. These act as initial defaults pre-bootstrap.
  */
+import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+import * as Device from 'expo-device';
 
 import { API_BASE_URL } from '../../env.defaults';
 
@@ -26,11 +28,65 @@ function bool(value: unknown, fallback: boolean): boolean {
   return fallback;
 }
 
-export const env = {
-  apiBaseUrl:
+/**
+ * Physical devices on the same Wi‑Fi use the Mac LAN IP from env.defaults.js.
+ * Simulators/emulators need host aliases — LAN IPs often fail inside the VM.
+ *
+ * In __DEV__, env.defaults.js wins over extra.apiBaseUrl so Expo Go picks up URL
+ * changes without reinstalling an EAS build (preview APKs bake the production URL).
+ */
+function resolveConfiguredBaseUrl(): string {
+  if (__DEV__) {
+    return (
+      process.env.EXPO_PUBLIC_API_BASE_URL ??
+      API_BASE_URL ??
+      extra.apiBaseUrl ??
+      ''
+    );
+  }
+  return (
     extra.apiBaseUrl ??
     process.env.EXPO_PUBLIC_API_BASE_URL ??
-    API_BASE_URL,
+    API_BASE_URL
+  );
+}
+
+function resolveApiBaseUrl(): string {
+  const configured = resolveConfiguredBaseUrl();
+
+  if (Device.isDevice) return configured;
+
+  try {
+    const url = new URL(configured.replace(/\/$/, ''));
+    const port = url.port || (url.protocol === 'https:' ? '443' : '80');
+
+    if (Platform.OS === 'android') {
+      // Android Studio AVD: 10.0.2.2 → host machine localhost
+      if (
+        url.hostname.startsWith('192.168.') ||
+        url.hostname.startsWith('10.') ||
+        url.hostname === 'localhost' ||
+        url.hostname === '127.0.0.1'
+      ) {
+        return `${url.protocol}//10.0.2.2:${port}`;
+      }
+    }
+
+    if (Platform.OS === 'ios') {
+      // iOS Simulator shares the Mac network stack — localhost is simplest
+      if (url.hostname.startsWith('192.168.') || url.hostname.startsWith('10.')) {
+        return `${url.protocol}//localhost:${port}`;
+      }
+    }
+  } catch {
+    /* keep configured value */
+  }
+
+  return configured;
+}
+
+export const env = {
+  apiBaseUrl: resolveApiBaseUrl(),
   apiVersion: extra.apiVersion ?? process.env.EXPO_PUBLIC_API_VERSION ?? 'v1',
   sentryDsn: extra.sentryDsn ?? process.env.EXPO_PUBLIC_SENTRY_DSN,
   buildChannel:

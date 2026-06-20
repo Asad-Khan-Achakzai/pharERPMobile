@@ -9,8 +9,9 @@ import { Card } from '@/ui/Card';
 import { Badge } from '@/ui/Badge';
 import { Text } from '@/ui/Text';
 import { FAB } from '@/ui/FAB';
-import { SkeletonRow } from '@/ui/Skeleton';
-import { EmptyState } from '@/ui/EmptyState';
+import { useTabBarLayout } from '@/navigation/useTabBarLayout';
+import { ListSkeletonList } from '@/ui/listCardSkeletons';
+import { EmptyState, ThemedEmptyIcon } from '@/ui/EmptyState';
 import { expensesQueries } from '@/data/expensesQueries';
 import { SyncStatusBadge } from '@/ui/SyncStatusBadge';
 import type { SyncUiState } from '@/data/localEntities';
@@ -50,6 +51,7 @@ function ExpensesImpl() {
   const pushWithReturn = usePushWithReturn();
   const { canDo } = usePermissions();
   const canCreate = canDo('expense_create');
+  const { stackFabOffset } = useTabBarLayout();
   const list = useQuery({
     queryKey: ['expenses', 'list'],
     queryFn: () => expensesQueries.list({ limit: 50 }),
@@ -59,12 +61,10 @@ function ExpensesImpl() {
     <Screen padded={false} scroll={false}>
       <Header back title="Expenses" />
       {list.isLoading ? (
-        <View className="px-4">
-          <SkeletonRow count={5} />
-        </View>
+        <ListSkeletonList count={5} variant="expense" />
       ) : (list.data?.items ?? []).length === 0 ? (
         <EmptyState
-          icon={<Receipt size={28} color="#94a3b8" />}
+          icon={<ThemedEmptyIcon Icon={Receipt} />}
           title="No expenses yet"
           description={
             canCreate
@@ -122,6 +122,7 @@ function ExpensesImpl() {
         <FAB
           onPress={() => pushWithReturn('/expenses/new')}
           icon={<Plus size={22} color="#fff" />}
+          bottomOffset={stackFabOffset}
         />
       ) : null}
     </Screen>

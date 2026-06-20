@@ -8,11 +8,15 @@ import { Card } from '@/ui/Card';
 import { Text, H3 } from '@/ui/Text';
 import { Button } from '@/ui/Button';
 import { ProgressBar } from '@/ui/ProgressBar';
-import { SkeletonRow } from '@/ui/Skeleton';
+import {
+  HomeRouteCardSkeleton,
+  HomeOrdersCardSkeleton,
+} from '@/features/home/homeCardSkeletons';
 import { masterQueries } from '@/data/masterQueries';
 import { planItemsApi } from '@/api/planItems';
 import { ordersApi } from '@/api/orders';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useThemedIcons } from '@/hooks/useThemedIcons';
 
 function todayYmd(): string {
   return format(new Date(), 'yyyy-MM-dd');
@@ -25,6 +29,7 @@ function todayYmd(): string {
 export const HomeTodayExecution: React.FC = () => {
   const router = useRouter();
   const { can, canSee } = usePermissions();
+  const icons = useThemedIcons();
   const ymd = todayYmd();
 
   const showRoute = canSee('rep_visits');
@@ -60,21 +65,15 @@ export const HomeTodayExecution: React.FC = () => {
   const ordersCount = orderRows.length;
   const ordersAmount = orderRows.reduce((sum, o) => sum + (o.totalAmount ?? 0), 0);
 
-  const loading = (showRoute && todayPlan.isLoading) || (showOrders && ordersToday.isLoading);
-
   return (
     <View className="mt-2">
-      {loading ? (
-        <View className="px-4">
-          <SkeletonRow count={2} />
-        </View>
-      ) : null}
-
-      {showRoute ? (
+      {showRoute && todayPlan.isLoading ? (
+        <HomeRouteCardSkeleton />
+      ) : showRoute ? (
         <Card className="mx-4 mt-3">
           <View className="flex-row items-center justify-between mb-2">
             <View className="flex-row items-center flex-1 min-w-0 mr-2">
-              <Calendar size={18} color="#0f172a" />
+              <Calendar size={18} color={icons.foreground} />
               <H3 className="ml-2" numberOfLines={1}>
                 Today&apos;s route
               </H3>
@@ -83,7 +82,7 @@ export const HomeTodayExecution: React.FC = () => {
               variant="ghost"
               size="sm"
               onPress={() => router.push('/(tabs)/visits')}
-              rightIcon={<ChevronRight size={16} color="#2563eb" />}
+              rightIcon={<ChevronRight size={16} color={icons.primary} />}
             >
               <Text tone="primary" size="sm" weight="medium">
                 Open
@@ -107,25 +106,29 @@ export const HomeTodayExecution: React.FC = () => {
           {plannedTotal > 0 ? (
             <ProgressBar value={completedVisits} max={plannedTotal} tone="primary" />
           ) : (
-            <Text size="xs" tone="muted">
-              No planned visits for today.
-            </Text>
+            <View className="h-3 justify-center">
+              <Text size="xs" tone="muted">
+                No planned visits for today.
+              </Text>
+            </View>
           )}
         </Card>
       ) : null}
 
-      {showOrders ? (
+      {showOrders && ordersToday.isLoading ? (
+        <HomeOrdersCardSkeleton />
+      ) : showOrders ? (
         <Card className="mx-4 mt-3">
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center">
-              <ShoppingBag size={18} color="#0f172a" />
+              <ShoppingBag size={18} color={icons.foreground} />
               <H3 className="ml-2">Orders today</H3>
             </View>
             <Button
               variant="ghost"
               size="sm"
               onPress={() => router.push('/(tabs)/orders')}
-              rightIcon={<ChevronRight size={16} color="#2563eb" />}
+              rightIcon={<ChevronRight size={16} color={icons.primary} />}
             >
               <Text tone="primary" size="sm" weight="medium">
                 See all
@@ -141,10 +144,10 @@ export const HomeTodayExecution: React.FC = () => {
         </Card>
       ) : null}
 
-      {showRoute && pendingVisits > 0 ? (
+      {showRoute && !todayPlan.isLoading && pendingVisits > 0 ? (
         <Card className="mx-4 mt-3">
           <View className="flex-row items-center">
-            <ClipboardList size={18} color="#2563eb" />
+            <ClipboardList size={18} color={icons.primary} />
             <View className="ml-2 flex-1">
               <Text size="sm" weight="semibold">
                 {pendingVisits} visit{pendingVisits === 1 ? '' : 's'} still pending

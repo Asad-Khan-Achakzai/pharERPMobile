@@ -8,10 +8,38 @@ import { Header } from '@/ui/Header';
 import { Card } from '@/ui/Card';
 import { Text, Subtitle } from '@/ui/Text';
 import { Badge } from '@/ui/Badge';
-import { SkeletonRow } from '@/ui/Skeleton';
-import { EmptyState } from '@/ui/EmptyState';
+import { ListSkeletonList } from '@/ui/listCardSkeletons';
+import { EmptyState, ThemedEmptyIcon } from '@/ui/EmptyState';
 import { attendanceApi } from '@/api/attendance';
 import { PermissionGate } from '@/auth/PermissionGate';
+import type { LiveAttendanceStatus, LiveRepLocation } from '@/domain/types';
+
+function attendanceBadge(status: LiveAttendanceStatus): { label: string; tone: 'success' | 'warning' | 'muted' } {
+  switch (status) {
+    case 'CHECKED_IN':
+      return { label: 'Checked in', tone: 'success' };
+    case 'CHECKED_OUT':
+      return { label: 'Checked out', tone: 'muted' };
+    case 'LATE_CHECKIN_PENDING':
+      return { label: 'Late check-in pending', tone: 'warning' };
+    default:
+      return { label: 'Not checked in', tone: 'muted' };
+  }
+}
+
+function locationSubtitle(item: LiveRepLocation, located: boolean): string {
+  if (located) {
+    const coords = `${item.lat!.toFixed(5)}, ${item.lng!.toFixed(5)}${
+      item.accuracy != null ? ` · ±${Math.round(item.accuracy)}m` : ''
+    }`;
+    if (item.locationSource === 'checkin') return `${coords} · check-in location`;
+    if (item.attendanceStatus === 'CHECKED_OUT') return `${coords} · last ping before check-out`;
+    return coords;
+  }
+  if (item.attendanceStatus === 'CHECKED_OUT') return 'Checked out · no GPS ping in the last 30 minutes';
+  if (item.attendanceStatus === 'NOT_CHECKED_IN') return 'Not checked in today';
+  return 'Checked in · no GPS ping in the last 30 minutes';
+}
 
 export default function LiveTrackingScreen() {
   const list = useQuery({
@@ -23,14 +51,12 @@ export default function LiveTrackingScreen() {
   return (
     <PermissionGate screen="manager_live" title="Live tracking">
       <Screen padded={false} scroll={false}>
-        <Header back title="Live tracking" subtitle="Last known rep locations" />
+        <Header back title="Live tracking" subtitle="Last known rep locations (updates every ~5 min while checked in)" />
         {list.isLoading ? (
-          <View className="px-4">
-            <SkeletonRow count={4} />
-          </View>
+          <ListSkeletonList count={4} variant="split" />
         ) : !list.data?.length ? (
           <EmptyState
-            icon={<MapPin size={28} color="#94a3b8" />}
+            icon={<ThemedEmptyIcon Icon={MapPin} />}
             title="No recent locations"
             description="Reps appear here after check-in when live tracking is enabled."
           />
@@ -44,27 +70,30 @@ export default function LiveTrackingScreen() {
               <RefreshControl refreshing={list.isFetching && !list.isLoading} onRefresh={() => list.refetch()} />
             }
             renderItem={({ item }) => {
+              const attendance = attendanceBadge(item.attendanceStatus ?? 'NOT_CHECKED_IN');
               const located = item.lat != null && item.lng != null && item.ageSeconds != null;
               const captured = item.capturedAt ? parseISO(item.capturedAt) : null;
+              const checkOutAt = item.checkOutTime ? parseISO(item.checkOutTime) : null;
               return (
                 <Card>
                   <View className="flex-row items-center justify-between">
                     <View className="flex-1 pr-2">
-                      <Text size="base" weight="semibold">
-                        {item.name}
-                      </Text>
-                      <Subtitle>
-                        {located
-                          ? `${item.lat!.toFixed(5)}, ${item.lng!.toFixed(5)}${
-                              item.accuracy != null ? ` · ±${Math.round(item.accuracy)}m` : ''
-                            }`
-                          : 'Not checked in or no GPS ping in the last 30 minutes'}
-                      </Subtitle>
+                      <View className="flex-row flex-wrap items-center gap-2">
+                        <Text size="base" weight="semibold">
+                          {item.name}
+                        </Text>
+                        <Badge tone={attendance.tone}>{attendance.label}</Badge>
+                      </View>
+                      <Subtitle>{locationSubtitle(item, located)}</Subtitle>
                       {located ? (
                         <Text size="xs" tone="muted" className="mt-1">
                           {captured && isValid(captured)
                             ? formatDistanceToNow(captured, { addSuffix: true })
                             : 'Unknown time'}
+                        </Text>
+                      ) : item.attendanceStatus === 'CHECKED_OUT' && checkOutAt && isValid(checkOutAt) ? (
+                        <Text size="xs" tone="muted" className="mt-1">
+                          Checked out {formatDistanceToNow(checkOutAt, { addSuffix: true })}
                         </Text>
                       ) : null}
                     </View>

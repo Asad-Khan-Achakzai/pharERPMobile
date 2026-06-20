@@ -8,9 +8,10 @@ import { Header } from '@/ui/Header';
 import { Card } from '@/ui/Card';
 import { Text } from '@/ui/Text';
 import { Button } from '@/ui/Button';
-import { SkeletonRow } from '@/ui/Skeleton';
+import { ListSkeletonList } from '@/ui/listCardSkeletons';
 import { EmptyState } from '@/ui/EmptyState';
 import { PermissionGate } from '@/auth/PermissionGate';
+import { useThemedIcons } from '@/hooks/useThemedIcons';
 import { ledgerApi, formatPkr } from '@/api/ledger';
 import {
   SupplierLedgerFilterSheet,
@@ -26,6 +27,7 @@ function entryLabel(description?: string, category?: string, referenceType?: str
 }
 
 function SupplierLedgerImpl() {
+  const icons = useThemedIcons();
   const [filters, setFilters] = React.useState<SupplierLedgerFilters>(emptySupplierLedgerFilters);
   const [filterOpen, setFilterOpen] = React.useState(false);
 
@@ -54,7 +56,7 @@ function SupplierLedgerImpl() {
             variant="ghost"
             size="sm"
             onPress={() => setFilterOpen(true)}
-            leftIcon={<SlidersHorizontal size={16} color="#0f172a" />}
+            leftIcon={<SlidersHorizontal size={16} color={icons.foreground} />}
           >
             {activeFilterCount > 0 ? `Filters (${activeFilterCount})` : 'Filters'}
           </Button>
@@ -91,9 +93,7 @@ function SupplierLedgerImpl() {
           onAction={() => setFilterOpen(true)}
         />
       ) : statement.isLoading ? (
-        <View className="px-4">
-          <SkeletonRow count={5} />
-        </View>
+        <ListSkeletonList count={5} variant="ledger" />
       ) : statement.data ? (
         <>
           <View className="px-4 pb-2 flex-row flex-wrap gap-2">

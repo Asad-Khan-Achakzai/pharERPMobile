@@ -1,3 +1,21 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Light defaults — overridden at runtime by ThemedAppShell via CSS variables. */
+:root {
+  --color-background: #f8f7fa;
+  --color-foreground: #2f2b3d;
+  --color-card: #ffffff;
+  --color-card-foreground: #2f2b3d;
+  --color-muted: #f1f0f2;
+  --color-muted-foreground: #808390;
+  --color-border: #e6e6e8;
+  --color-input: #e6e6e8;
+  --color-input-background: #f8f7fa;
+  --color-secondary: #f1f0f2;
+  --color-secondary-foreground: #2f2b3d;
+  --color-primary: #7367f0;
+  --color-primary-foreground: #ffffff;
+  --color-primary-muted: rgba(115, 103, 240, 0.12);
+}

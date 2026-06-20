@@ -14,7 +14,7 @@ import { Text, Subtitle } from '@/ui/Text';
 import { Badge } from '@/ui/Badge';
 import { TextField } from '@/ui/TextField';
 import { Button } from '@/ui/Button';
-import { SkeletonRow } from '@/ui/Skeleton';
+import { DetailItemsCardSkeleton, DetailSummaryCardSkeleton } from '@/ui/listCardSkeletons';
 import { StickyActionBar } from '@/ui/StickyActionBar';
 import { useToast } from '@/ui/Toast';
 import { PermissionGate } from '@/auth/PermissionGate';
@@ -25,8 +25,10 @@ import { reportsApi } from '@/api/reports';
 import { ApiError } from '@/api/client';
 import { DoctorPickerSheet } from '@/features/weeklyPlan/DoctorPickerSheet';
 import { WeekDayCard } from '@/features/weeklyPlan/WeekDayCard';
+import { CheckInPolicyCard } from '@/features/weeklyPlan/CheckInPolicyCard';
 import { usePlanDraftStorage } from '@/hooks/usePlanDraftStorage';
 import { useAuthStore } from '@/state/authStore';
+import { useThemedIcons } from '@/hooks/useThemedIcons';
 import {
   enumerateWeekYmd,
   groupPlanItemsByDate,
@@ -65,6 +67,7 @@ function WeeklyPlanBuilderImpl() {
   const canEdit = canAny(['weeklyPlans.edit', 'weeklyPlans.create']);
   const canApprove = canAny(['weeklyPlans.approve', 'admin.access']);
   const authUser = useAuthStore((s) => s.user);
+  const icons = useThemedIcons();
 
   const planQ = useQuery({
     queryKey: ['plan', id],
@@ -298,11 +301,10 @@ function WeeklyPlanBuilderImpl() {
 
   if (planQ.isLoading || !plan) {
     return (
-      <Screen padded={false}>
+      <Screen padded={false} edges={['bottom']}>
         <Header back title="Week builder" />
-        <View className="px-4">
-          <SkeletonRow count={4} />
-        </View>
+        <DetailSummaryCardSkeleton />
+        <DetailItemsCardSkeleton rows={4} />
       </Screen>
     );
   }
@@ -353,6 +355,14 @@ function WeeklyPlanBuilderImpl() {
           </Card>
         ) : null}
 
+        {plan.attendanceSystemMode === 'CHECKIN_POLICY_V2' ? (
+          <CheckInPolicyCard
+            planId={id!}
+            disabled={readOnly}
+            initial={plan.checkInConfiguration ?? null}
+          />
+        ) : null}
+
         {metrics?.planned != null ? (
           <Text size="xs" tone="muted" className="px-4 mt-2">
             Field execution: {metrics.visited ?? 0}/{metrics.planned} visits completed
@@ -366,7 +376,7 @@ function WeeklyPlanBuilderImpl() {
                 size="sm"
                 variant="outline"
                 className="mr-2 mb-2"
-                leftIcon={<Copy size={14} color="#0f172a" />}
+                leftIcon={<Copy size={14} color={icons.foreground} />}
                 loading={copyWeek.isPending}
                 onPress={() => copyWeek.mutate()}
               >

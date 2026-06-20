@@ -24,7 +24,6 @@ import {
   Receipt,
   Smartphone,
   Target,
-  Users,
   MapPin,
   Moon,
   Sun,
@@ -33,6 +32,7 @@ import {
   Landmark,
   BookOpen,
   Truck,
+  type LucideIcon,
 } from 'lucide-react-native';
 import { Screen } from '@/ui/Screen';
 import { Header } from '@/ui/Header';
@@ -44,19 +44,25 @@ import { Button } from '@/ui/Button';
 import { useAuthStore } from '@/state/authStore';
 import { useTheme, type ThemePreference } from '@/theme/ThemeProvider';
 import { authApi } from '@/api/auth';
-import { OutboxFooter } from '@/features/sync/OutboxFooter';
 import { hasAnyPermission, hasPermission } from '@/auth/rbac';
 import { usePushWithReturn } from '@/navigation/usePushWithReturn';
+import { ConnectionStatusIndicator } from '@/features/sync/ConnectionStatusBar';
 import type { User } from '@/domain/types';
 
 interface MoreEntry {
   key: string;
   title: string;
-  icon: React.ReactNode;
+  Icon: LucideIcon;
   route: string;
   /** Permission(s) gating the row; `undefined` means always visible. */
   permissionAny?: string[];
 }
+
+const THEME_OPTIONS: { key: ThemePreference; label: string; Icon: LucideIcon }[] = [
+  { key: 'system', label: 'System', Icon: Monitor },
+  { key: 'light', label: 'Light', Icon: Sun },
+  { key: 'dark', label: 'Dark', Icon: Moon },
+];
 
 /**
  * Permission keys here MUST exist in the backend catalog
@@ -67,30 +73,35 @@ const ENTRIES_PRIMARY: MoreEntry[] = [
   {
     key: 'kpi',
     title: 'My targets & KPI',
-    icon: <Target size={18} color="#0f172a" />,
+    Icon: Target,
     route: '/kpi',
-    /** Web `verticalMenuData`: `targets.view` for `/targets`. */
-    permissionAny: ['targets.view', 'team.viewAllReports'],
+    /** Web: `/targets` (managers) + MRep command center KPIs (field reps). */
+    permissionAny: [
+      'targets.view',
+      'team.viewAllReports',
+      'weeklyPlans.view',
+      'weeklyPlans.markVisit',
+    ],
   },
   {
     key: 'expenses',
     title: 'Expenses',
-    icon: <Receipt size={18} color="#0f172a" />,
+    Icon: Receipt,
     route: '/expenses',
     permissionAny: ['expenses.view', 'expenses.create'],
   },
   {
     key: 'collections',
     title: 'Collections',
-    icon: <Wallet size={18} color="#0f172a" />,
-    route: '/pharmacy',
+    Icon: Wallet,
+    route: '/payments',
     /** Web pairs `payments.view` (list) + `payments.create` (record). */
     permissionAny: ['payments.view', 'payments.create'],
   },
   {
     key: 'weekly',
     title: 'Weekly plan',
-    icon: <Briefcase size={18} color="#0f172a" />,
+    Icon: Briefcase,
     route: '/plan/weekly',
     permissionAny: ['weeklyPlans.view', 'weeklyPlans.edit'],
   },
@@ -101,35 +112,35 @@ const ENTRIES_FINANCE: MoreEntry[] = [
   {
     key: 'finance-expenses',
     title: 'Expenses',
-    icon: <Receipt size={18} color="#0f172a" />,
+    Icon: Receipt,
     route: '/expenses',
     permissionAny: ['expenses.view', 'expenses.create'],
   },
   {
     key: 'finance-collections',
     title: 'Payments & collections',
-    icon: <Wallet size={18} color="#0f172a" />,
-    route: '/pharmacy',
+    Icon: Wallet,
+    route: '/payments',
     permissionAny: ['payments.view', 'payments.create', 'pharmacies.view'],
   },
   {
     key: 'customer-balances',
     title: 'Customer balances',
-    icon: <Landmark size={18} color="#0f172a" />,
+    Icon: Landmark,
     route: '/finance/customer-balances',
     permissionAny: ['ledger.view', 'admin.access'],
   },
   {
     key: 'general-ledger',
     title: 'General ledger',
-    icon: <BookOpen size={18} color="#0f172a" />,
+    Icon: BookOpen,
     route: '/finance/general-ledger',
     permissionAny: ['reports.accounting', 'admin.access'],
   },
   {
     key: 'supplier-ledger',
     title: 'Supplier ledger',
-    icon: <Truck size={18} color="#0f172a" />,
+    Icon: Truck,
     route: '/finance/supplier-ledger',
     permissionAny: ['ledger.view', 'admin.access'],
   },
@@ -155,7 +166,7 @@ const ENTRIES_MANAGER: MoreEntry[] = [
   {
     key: 'approvals',
     title: 'Approvals',
-    icon: <ClipboardList size={18} color="#0f172a" />,
+    Icon: ClipboardList,
     route: '/(manager)/approvals',
     permissionAny: [
       'attendance.approve',
@@ -171,21 +182,14 @@ const ENTRIES_MANAGER: MoreEntry[] = [
   {
     key: 'live',
     title: 'Live tracking',
-    icon: <MapPin size={18} color="#0f172a" />,
+    Icon: MapPin,
     route: '/(manager)/live',
     permissionAny: ['team.view', 'team.viewAllReports', 'attendance.viewTeam', 'admin.access'],
   },
   {
-    key: 'team',
-    title: 'Team overview',
-    icon: <Users size={18} color="#0f172a" />,
-    route: '/(manager)',
-    permissionAny: ['team.view', 'team.viewAllReports', 'admin.access'],
-  },
-  {
     key: 'team-attendance',
     title: 'Team attendance',
-    icon: <ClipboardCheck size={18} color="#0f172a" />,
+    Icon: ClipboardCheck,
     route: '/(manager)/attendance',
     permissionAny: [
       'attendance.viewTeam',
@@ -204,25 +208,25 @@ const ENTRIES_UTILS: MoreEntry[] = [
   {
     key: 'notifications',
     title: 'Notifications',
-    icon: <BellRing size={18} color="#0f172a" />,
+    Icon: BellRing,
     route: '/notifications',
   },
   {
     key: 'outbox',
     title: 'Outbox & sync',
-    icon: <CloudUpload size={18} color="#0f172a" />,
+    Icon: CloudUpload,
     route: '/outbox',
   },
   {
     key: 'devices',
     title: 'Devices',
-    icon: <Smartphone size={18} color="#0f172a" />,
+    Icon: Smartphone,
     route: '/devices',
   },
   {
     key: 'change-password',
     title: 'Change password',
-    icon: <KeyRound size={18} color="#0f172a" />,
+    Icon: KeyRound,
     route: '/change-password',
   },
 ];
@@ -239,12 +243,6 @@ export default function MoreScreen() {
   const pushWithReturn = usePushWithReturn();
   const { user, company, signOut } = useAuthStore();
   const { preference, setPreference, colors } = useTheme();
-
-  const themeOptions: { key: ThemePreference; label: string; icon: React.ReactNode }[] = [
-    { key: 'system', label: 'System', icon: <Monitor size={16} color={colors.mutedForeground} /> },
-    { key: 'light', label: 'Light', icon: <Sun size={16} color={colors.mutedForeground} /> },
-    { key: 'dark', label: 'Dark', icon: <Moon size={16} color={colors.mutedForeground} /> },
-  ];
 
   function onThemeSelect(next: ThemePreference) {
     if (next === preference) return;
@@ -308,17 +306,21 @@ export default function MoreScreen() {
               {company?.name}
             </Text>
           </View>
+          <ConnectionStatusIndicator />
         </View>
       </Card>
-
-      <OutboxFooter />
 
       {primary.length > 0 ? (
         <Card className="mx-4 mt-2" padded={false}>
           <View className="px-3">
             {primary.map((e, i) => (
               <React.Fragment key={e.key}>
-                <ListRow left={e.icon} title={e.title} chevron onPress={() => pushWithReturn(e.route)} />
+                <ListRow
+                  left={<e.Icon size={18} color={colors.foreground} />}
+                  title={e.title}
+                  chevron
+                  onPress={() => pushWithReturn(e.route)}
+                />
                 {i < primary.length - 1 ? <Divider /> : null}
               </React.Fragment>
             ))}
@@ -337,7 +339,12 @@ export default function MoreScreen() {
           <View className="px-3">
             {finance.map((e, i) => (
               <React.Fragment key={e.key}>
-                <ListRow left={e.icon} title={e.title} chevron onPress={() => pushWithReturn(e.route)} />
+                <ListRow
+                  left={<e.Icon size={18} color={colors.foreground} />}
+                  title={e.title}
+                  chevron
+                  onPress={() => pushWithReturn(e.route)}
+                />
                 {i < finance.length - 1 ? <Divider /> : null}
               </React.Fragment>
             ))}
@@ -356,7 +363,12 @@ export default function MoreScreen() {
           <View className="px-3">
             {manager.map((e, i) => (
               <React.Fragment key={e.key}>
-                <ListRow left={e.icon} title={e.title} chevron onPress={() => pushWithReturn(e.route)} />
+                <ListRow
+                  left={<e.Icon size={18} color={colors.foreground} />}
+                  title={e.title}
+                  chevron
+                  onPress={() => pushWithReturn(e.route)}
+                />
                 {i < manager.length - 1 ? <Divider /> : null}
               </React.Fragment>
             ))}
@@ -368,7 +380,12 @@ export default function MoreScreen() {
         <View className="px-3">
           {utils.map((e, i) => (
             <React.Fragment key={e.key}>
-              <ListRow left={e.icon} title={e.title} chevron onPress={() => pushWithReturn(e.route)} />
+              <ListRow
+                left={<e.Icon size={18} color={colors.foreground} />}
+                title={e.title}
+                chevron
+                onPress={() => pushWithReturn(e.route)}
+              />
               {i < utils.length - 1 ? <Divider /> : null}
             </React.Fragment>
           ))}
@@ -383,21 +400,22 @@ export default function MoreScreen() {
         </View>
         <Divider />
         <View className="px-3 py-3 flex-row gap-2">
-          {themeOptions.map((opt) => {
-            const selected = preference === opt.key;
+          {THEME_OPTIONS.map(({ key, label, Icon }) => {
+            const selected = preference === key;
+            const accentColor = selected ? colors.primary : colors.mutedForeground;
             return (
               <Pressable
-                key={opt.key}
+                key={key}
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
-                onPress={() => onThemeSelect(opt.key)}
+                onPress={() => onThemeSelect(key)}
                 style={{
                   flex: 1,
                   minHeight: 44,
                   borderRadius: 12,
                   borderWidth: 1,
                   borderColor: selected ? colors.primary : colors.border,
-                  backgroundColor: selected ? colors.primary : colors.muted,
+                  backgroundColor: selected ? colors.primaryMuted : colors.muted,
                   alignItems: 'center',
                   justifyContent: 'center',
                   paddingHorizontal: 8,
@@ -405,13 +423,13 @@ export default function MoreScreen() {
                 }}
               >
                 <View className="flex-row items-center">
-                  {opt.icon}
+                  <Icon size={16} color={accentColor} />
                   <Text
                     size="sm"
                     weight={selected ? 'semibold' : 'medium'}
-                    style={{ marginLeft: 6, color: selected ? colors.primaryForeground : colors.foreground }}
+                    style={{ marginLeft: 6, color: accentColor }}
                   >
-                    {opt.label}
+                    {label}
                   </Text>
                 </View>
               </Pressable>
@@ -421,7 +439,7 @@ export default function MoreScreen() {
       </Card>
 
       <View className="px-4 mt-3 mb-8">
-        <Button variant="outline" onPress={onLogout} leftIcon={<LogOut size={18} color="#0f172a" />}>
+        <Button variant="outline" onPress={onLogout} leftIcon={<LogOut size={18} color={colors.foreground} />}>
           Sign out
         </Button>
       </View>

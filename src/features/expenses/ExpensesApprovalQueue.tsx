@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, FlatList, Modal, RefreshControl, Pressable, ScrollView } from 'react-native';
+import { View, FlatList, Modal, RefreshControl, ScrollView } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format, parseISO, isValid } from 'date-fns';
 import { CheckCircle2, XCircle } from 'lucide-react-native';
@@ -8,13 +8,13 @@ import { Text, Subtitle, Label } from '@/ui/Text';
 import { Button } from '@/ui/Button';
 import { Badge } from '@/ui/Badge';
 import { TextField } from '@/ui/TextField';
-import { SkeletonRow } from '@/ui/Skeleton';
+import { ListSkeletonList } from '@/ui/listCardSkeletons';
 import { EmptyState } from '@/ui/EmptyState';
 import { useToast } from '@/ui/Toast';
+import { FilterOption } from '@/ui/FilterOption';
 import { expensesApi } from '@/api/expenses';
 import { accountsApi, moneyAccountLabel, resolveMoneyAccountId } from '@/api/accounts';
 import type { Expense, ID, MoneyAccount } from '@/domain/types';
-import { cn } from '@/utils/cn';
 
 function employeeName(expense: Expense): string {
   const e = expense.employeeId;
@@ -92,7 +92,7 @@ export const ExpensesApprovalQueue: React.FC = () => {
   if (list.isLoading) {
     return (
       <View className="px-4">
-        <SkeletonRow count={4} />
+        <ListSkeletonList count={4} variant="expense" />
       </View>
     );
   }
@@ -106,6 +106,10 @@ export const ExpensesApprovalQueue: React.FC = () => {
     );
   }
 
+  const approvingId = approve.isPending ? approve.variables?.id ?? null : null;
+  const rejectingId = reject.isPending ? reject.variables?.id ?? null : null;
+  const anyPending = approve.isPending || reject.isPending;
+
   return (
     <>
       <FlatList
@@ -118,6 +122,7 @@ export const ExpensesApprovalQueue: React.FC = () => {
         }
         renderItem={({ item }) => {
           const d = item.date ? parseISO(item.date) : null;
+          const rowLocked = anyPending && approvingId !== item._id && rejectingId !== item._id;
           return (
             <Card>
               <View className="flex-row items-center justify-between">
@@ -138,6 +143,7 @@ export const ExpensesApprovalQueue: React.FC = () => {
                   size="sm"
                   variant="outline"
                   className="flex-1 mr-2"
+                  disabled={rowLocked || approvingId === item._id}
                   onPress={() => {
                     setRejectReason('');
                     setRejectFor(item);
@@ -149,6 +155,7 @@ export const ExpensesApprovalQueue: React.FC = () => {
                 <Button
                   size="sm"
                   className="flex-1"
+                  disabled={rowLocked || rejectingId === item._id}
                   onPress={() => {
                     setMoneyAccountId('');
                     setApproveFor(item);
@@ -178,7 +185,7 @@ export const ExpensesApprovalQueue: React.FC = () => {
               Which cash or bank account was used for this payment?
             </Text>
             {moneyAccounts.isLoading ? (
-              <SkeletonRow count={2} />
+              <ListSkeletonList count={2} variant="split" className="px-0 pt-0" />
             ) : (moneyAccounts.data ?? []).length === 0 ? (
               <Text size="sm" tone="muted">
                 No money accounts are configured for this company.
@@ -194,23 +201,13 @@ export const ExpensesApprovalQueue: React.FC = () => {
                 {(moneyAccounts.data ?? []).map((account) => {
                   const selected = moneyAccountId === account._id;
                   return (
-                    <Pressable
+                    <FilterOption
                       key={account._id}
+                      label={moneyAccountLabel(account)}
+                      description={account.moneyAccountNature ?? undefined}
+                      selected={selected}
                       onPress={() => setMoneyAccountId(account._id)}
-                      className={cn(
-                        'rounded-xl border px-3 py-2.5 mb-2',
-                        selected ? 'border-primary bg-primary/5' : 'border-border'
-                      )}
-                    >
-                      <Text size="sm" weight={selected ? 'semibold' : 'medium'}>
-                        {moneyAccountLabel(account)}
-                      </Text>
-                      {account.moneyAccountNature ? (
-                        <Text size="xs" tone="muted" className="mt-0.5">
-                          {account.moneyAccountNature}
-                        </Text>
-                      ) : null}
-                    </Pressable>
+                    />
                   );
                 })}
               </ScrollView>
@@ -219,6 +216,7 @@ export const ExpensesApprovalQueue: React.FC = () => {
               <Button
                 variant="outline"
                 className="flex-1 mr-2"
+                disabled={approve.isPending}
                 onPress={() => {
                   setApproveFor(null);
                   setMoneyAccountId('');
@@ -229,7 +227,7 @@ export const ExpensesApprovalQueue: React.FC = () => {
               <Button
                 className="flex-1"
                 loading={approve.isPending}
-                disabled={!moneyAccountId || moneyAccounts.isLoading}
+                disabled={!moneyAccountId || moneyAccounts.isLoading || approve.isPending}
                 onPress={() => {
                   if (!approveFor || !moneyAccountId) return;
                   approve.mutate({ id: approveFor._id, moneyAccountId });
@@ -257,12 +255,18 @@ export const ExpensesApprovalQueue: React.FC = () => {
               className="mt-3"
             />
             <View className="flex-row mt-4">
-              <Button variant="outline" className="flex-1 mr-2" onPress={() => setRejectFor(null)}>
+              <Button
+                variant="outline"
+                className="flex-1 mr-2"
+                disabled={reject.isPending}
+                onPress={() => setRejectFor(null)}
+              >
                 Cancel
               </Button>
               <Button
                 className="flex-1"
-                disabled={rejectReason.trim().length < 3}
+                loading={reject.isPending}
+                disabled={rejectReason.trim().length < 3 || reject.isPending}
                 onPress={() => {
                   if (!rejectFor) return;
                   reject.mutate({ id: rejectFor._id, reason: rejectReason.trim() });

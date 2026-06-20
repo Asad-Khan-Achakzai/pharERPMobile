@@ -84,7 +84,15 @@ export const SCREEN_PERMISSIONS = {
   weekly_plan: { anyOf: ['weeklyPlans.view', 'weeklyPlans.edit', 'weeklyPlans.create'] },
   weekly_plan_detail: { anyOf: ['weeklyPlans.view'] },
   weekly_plan_new: { anyOf: ['weeklyPlans.create'] },
-  kpi: { anyOf: ['targets.view', 'team.viewAllReports'] },
+  /** Web parity: `MrepCommandCenterPage` + `/targets` for managers. */
+  kpi: {
+    anyOf: [
+      'targets.view',
+      'team.viewAllReports',
+      'weeklyPlans.view',
+      'weeklyPlans.markVisit',
+    ],
+  },
 } satisfies Record<string, PermissionRequirement | null>;
 
 export type ScreenKey = keyof typeof SCREEN_PERMISSIONS;

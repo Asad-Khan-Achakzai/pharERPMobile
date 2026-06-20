@@ -8,7 +8,10 @@ export interface ResolvedFlags {
   enableProductMedia: boolean;
   attendanceGeofenceEnabled: boolean;
   attendanceSelfieEnabled: boolean;
+  attendanceSystemMode: 'LEGACY' | 'CHECKIN_POLICY_V2';
+  attendanceConfigVersion: number;
   doctorApprovalRequired: boolean;
+  liveTrackingEnabled: boolean;
   source: 'server' | 'env';
 }
 
@@ -27,7 +30,11 @@ export function useFlags(): ResolvedFlags {
       enableProductMedia: cfg.media.enableProductMedia,
       attendanceGeofenceEnabled: cfg.attendance.geofenceEnabled,
       attendanceSelfieEnabled: cfg.attendance.selfieEnabled,
+      attendanceSystemMode:
+        cfg.attendance.systemMode === 'CHECKIN_POLICY_V2' ? 'CHECKIN_POLICY_V2' : 'LEGACY',
+      attendanceConfigVersion: cfg.attendance.configVersion ?? 1,
       doctorApprovalRequired: cfg.doctors.approvalRequired,
+      liveTrackingEnabled: !!cfg.liveTracking?.enabled,
       source: 'server',
     };
   }
@@ -38,7 +45,10 @@ export function useFlags(): ResolvedFlags {
     enableProductMedia: env.flags.enableProductMedia,
     attendanceGeofenceEnabled: false,
     attendanceSelfieEnabled: false,
+    attendanceSystemMode: 'LEGACY',
+    attendanceConfigVersion: 1,
     doctorApprovalRequired: false,
+    liveTrackingEnabled: false,
     source: 'env',
   };
 }

@@ -1,5 +1,8 @@
 import * as React from 'react';
 import { View, Pressable, ActivityIndicator } from 'react-native';
+import { FilterChip } from '@/ui/FilterChip';
+import { FilterSelectionBar } from '@/ui/FilterSelectionBar';
+import { useTheme } from '@/theme/ThemeProvider';
 import { Sheet } from '@/ui/Sheet';
 import { Text } from '@/ui/Text';
 import { SearchField } from '@/ui/SearchField';
@@ -7,7 +10,6 @@ import { Button } from '@/ui/Button';
 import { pharmaciesApi } from '@/api/pharmacies';
 import { usersApi, type AssignableUser } from '@/api/users';
 import type { ID, Pharmacy } from '@/domain/types';
-import { cn } from '@/utils/cn';
 
 export type OrderStatusFilter =
   | ''
@@ -57,6 +59,7 @@ export const OrdersFilterSheet: React.FC<OrdersFilterSheetProps> = ({
   onApply,
   canFilterByRep,
 }) => {
+  const { colors } = useTheme();
   const [draft, setDraft] = React.useState<OrderListFilters>(value);
   const [pharmacySearch, setPharmacySearch] = React.useState('');
   const [pharmacyHits, setPharmacyHits] = React.useState<Pharmacy[]>([]);
@@ -155,43 +158,26 @@ export const OrdersFilterSheet: React.FC<OrdersFilterSheetProps> = ({
         Status
       </Text>
       <View className="flex-row flex-wrap gap-2 mb-4">
-        {STATUS_OPTIONS.map((opt) => {
-          const active = draft.status === opt.value;
-          return (
-            <Pressable
-              key={opt.value || 'default'}
-              onPress={() => setDraft((d) => ({ ...d, status: opt.value }))}
-              className={cn(
-                'rounded-full px-3 py-1.5 border',
-                active ? 'bg-primary border-primary' : 'bg-muted border-border',
-              )}
-            >
-              <Text size="xs" className={active ? 'text-white' : undefined}>
-                {opt.label}
-              </Text>
-            </Pressable>
-          );
-        })}
+        {STATUS_OPTIONS.map((opt) => (
+          <FilterChip
+            key={opt.value || 'default'}
+            label={opt.label}
+            selected={draft.status === opt.value}
+            onPress={() => setDraft((d) => ({ ...d, status: opt.value }))}
+          />
+        ))}
       </View>
 
       <Text size="xs" weight="semibold" tone="muted" className="mb-2 uppercase tracking-wide">
         Pharmacy
       </Text>
       {draft.pharmacyId ? (
-        <View className="flex-row items-center justify-between rounded-xl border border-border bg-muted px-3 py-2 mb-2">
-          <Text size="sm" className="flex-1 pr-2" numberOfLines={1}>
-            {draft.pharmacyName ?? 'Pharmacy'}
-          </Text>
-          <Button
-            variant="ghost"
-            size="sm"
-            onPress={() =>
-              setDraft((d) => ({ ...d, pharmacyId: undefined, pharmacyName: undefined }))
-            }
-          >
-            Clear
-          </Button>
-        </View>
+        <FilterSelectionBar
+          label={draft.pharmacyName ?? 'Pharmacy'}
+          onClear={() =>
+            setDraft((d) => ({ ...d, pharmacyId: undefined, pharmacyName: undefined }))
+          }
+        />
       ) : null}
       <SearchField
         value={pharmacySearch}
@@ -199,7 +185,7 @@ export const OrdersFilterSheet: React.FC<OrdersFilterSheetProps> = ({
         placeholder="Search pharmacy name…"
       />
       {pharmacyLoading ? (
-        <ActivityIndicator className="my-3" />
+        <ActivityIndicator color={colors.primary} className="my-3" />
       ) : (
         pharmacyHits.map((p) => (
           <Pressable
@@ -209,7 +195,8 @@ export const OrdersFilterSheet: React.FC<OrdersFilterSheetProps> = ({
               setPharmacySearch('');
               setPharmacyHits([]);
             }}
-            className="py-2 border-b border-border"
+            className="py-2 border-b"
+            style={{ borderBottomColor: colors.border }}
           >
             <Text size="sm" weight="medium">
               {p.name}
@@ -234,20 +221,12 @@ export const OrdersFilterSheet: React.FC<OrdersFilterSheetProps> = ({
             Medical rep
           </Text>
           {draft.medicalRepId ? (
-            <View className="flex-row items-center justify-between rounded-xl border border-border bg-muted px-3 py-2 mb-2">
-              <Text size="sm" className="flex-1 pr-2" numberOfLines={1}>
-                {draft.medicalRepName ?? 'Rep'}
-              </Text>
-              <Button
-                variant="ghost"
-                size="sm"
-                onPress={() =>
-                  setDraft((d) => ({ ...d, medicalRepId: undefined, medicalRepName: undefined }))
-                }
-              >
-                Clear
-              </Button>
-            </View>
+            <FilterSelectionBar
+              label={draft.medicalRepName ?? 'Rep'}
+              onClear={() =>
+                setDraft((d) => ({ ...d, medicalRepId: undefined, medicalRepName: undefined }))
+              }
+            />
           ) : null}
           <SearchField
             value={repSearch}
@@ -255,7 +234,7 @@ export const OrdersFilterSheet: React.FC<OrdersFilterSheetProps> = ({
             placeholder="Search rep name or email…"
           />
           {repLoading ? (
-            <ActivityIndicator className="my-3" />
+            <ActivityIndicator color={colors.primary} className="my-3" />
           ) : (
             repHits.map((u) => (
               <Pressable
@@ -269,7 +248,8 @@ export const OrdersFilterSheet: React.FC<OrdersFilterSheetProps> = ({
                   setRepSearch('');
                   setRepHits([]);
                 }}
-                className="py-2 border-b border-border"
+                className="py-2 border-b"
+                style={{ borderBottomColor: colors.border }}
               >
                 <Text size="sm" weight="medium">
                   {u.name}

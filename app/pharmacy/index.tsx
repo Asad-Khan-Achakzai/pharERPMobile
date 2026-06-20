@@ -9,8 +9,8 @@ import { PressableCard } from '@/ui/Card';
 import { Text } from '@/ui/Text';
 import { Badge } from '@/ui/Badge';
 import { Button } from '@/ui/Button';
-import { SkeletonRow } from '@/ui/Skeleton';
-import { EmptyState } from '@/ui/EmptyState';
+import { ListSkeletonList } from '@/ui/listCardSkeletons';
+import { EmptyState, ThemedEmptyIcon } from '@/ui/EmptyState';
 import { masterQueries } from '@/data/masterQueries';
 import { usePermissions } from '@/hooks/usePermissions';
 import { PermissionGate } from '@/auth/PermissionGate';
@@ -44,16 +44,14 @@ function PharmaciesScreenImpl() {
           ) : undefined
         }
       />
-      <View className="px-4 pb-2">
+      <View className="px-4 pt-2 pb-2">
         <SearchField value={q} onChangeText={setQ} placeholder="Search by name or city" />
       </View>
       {list.isLoading ? (
-        <View className="px-4">
-          <SkeletonRow count={6} />
-        </View>
+        <ListSkeletonList count={6} variant="split" className="px-4" />
       ) : (list.data?.items ?? []).length === 0 ? (
         <EmptyState
-          icon={<Building2 size={28} color="#94a3b8" />}
+          icon={<ThemedEmptyIcon Icon={Building2} />}
           title="No pharmacies"
           description="Your admin needs to add pharmacies to your territory."
         />

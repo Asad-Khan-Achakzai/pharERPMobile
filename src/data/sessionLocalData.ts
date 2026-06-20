@@ -19,6 +19,18 @@ export function getSessionOwnerFromAuth(): { userId: string; companyId: string }
   return { userId: String(user._id), companyId: String(company._id) };
 }
 
+/** Session scope from SQLite — safe when Zustand is not hydrated (background tasks). */
+export async function getSessionScopeFromStorage(): Promise<{ userId: string; companyId: string } | null> {
+  const raw = await kvStore.get(SESSION_OWNER_KV);
+  if (!raw) return null;
+  const sep = raw.indexOf(':');
+  if (sep <= 0) return null;
+  const companyId = raw.slice(0, sep);
+  const userId = raw.slice(sep + 1);
+  if (!userId || !companyId) return null;
+  return { userId, companyId };
+}
+
 export async function getStoredSessionOwner(): Promise<string | null> {
   return kvStore.get(SESSION_OWNER_KV);
 }

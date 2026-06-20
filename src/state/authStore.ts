@@ -11,6 +11,7 @@ import {
   setStoredSessionOwner,
 } from '@/data/sessionLocalData';
 import { resetSyncStatusAfterSessionChange } from '@/data/syncEngine';
+import { stopBackgroundLiveTracking } from '@/features/tracking/backgroundLocationService';
 
 interface AuthState {
   bootstrapped: boolean;
@@ -97,6 +98,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   async signOut() {
     const { user } = get();
+    await stopBackgroundLiveTracking();
     if (user?._id) {
       await clearUserScopedCache(String(user._id));
     }

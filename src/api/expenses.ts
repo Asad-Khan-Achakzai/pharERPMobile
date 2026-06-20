@@ -97,6 +97,7 @@ export interface CollectionCreateInput {
   distributorId?: ID | null;
   amount: number;
   paymentMethod: PaymentMethod;
+  moneyAccountId: ID;
   referenceNumber?: string;
   date?: string;
   notes?: string;

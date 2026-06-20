@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Pressable, View, ScrollView } from 'react-native';
 import { Text } from './Text';
 import { cn } from '@/utils/cn';
+import { useTheme } from '@/theme/ThemeProvider';
 
 interface TabItem {
   key: string;
@@ -24,35 +25,37 @@ export const Tabs: React.FC<TabsProps> = ({
   className,
   scrollable,
 }) => {
+  const { colors } = useTheme();
+
   const content = items.map((item) => {
     const active = item.key === value;
     return (
       <Pressable
         key={item.key}
         onPress={() => onChange(item.key)}
-        className={cn(
-          'px-3 py-2 rounded-full mr-2 flex-row items-center',
-          active ? 'bg-primary' : 'bg-muted',
-        )}
+        className="px-3 py-2 rounded-full mr-2 flex-row items-center"
+        style={{
+          backgroundColor: active ? colors.primary : colors.muted,
+        }}
       >
         <Text
           size="sm"
           weight="medium"
-          tone={active ? 'inverse' : 'default'}
+          style={{ color: active ? colors.primaryForeground : colors.foreground }}
         >
           {item.label}
         </Text>
         {typeof item.count === 'number' ? (
           <View
-            className={cn(
-              'ml-1.5 rounded-full px-1.5 py-0.5',
-              active ? 'bg-white/20' : 'bg-slate-200',
-            )}
+            className="ml-1.5 rounded-full px-1.5 py-0.5"
+            style={{
+              backgroundColor: active ? 'rgba(255,255,255,0.2)' : colors.border,
+            }}
           >
             <Text
               size="xs"
               weight="medium"
-              tone={active ? 'inverse' : 'default'}
+              style={{ color: active ? colors.primaryForeground : colors.foreground }}
             >
               {item.count}
             </Text>

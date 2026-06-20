@@ -2,6 +2,7 @@ import * as React from 'react';
 import { View } from 'react-native';
 import { Text } from './Text';
 import { cn } from '@/utils/cn';
+import { useTheme } from '@/theme/ThemeProvider';
 
 export type BadgeTone =
   | 'default'
@@ -19,37 +20,6 @@ interface BadgeProps {
   outline?: boolean;
 }
 
-const surface: Record<BadgeTone, string> = {
-  default: 'bg-slate-100',
-  primary: 'bg-primary-50',
-  success: 'bg-success/10',
-  warning: 'bg-warning/10',
-  danger: 'bg-destructive/10',
-  info: 'bg-primary-50',
-  muted: 'bg-muted',
-};
-
-const outlineSurface: Record<BadgeTone, string> = {
-  default: 'border border-slate-300',
-  primary: 'border border-primary-200',
-  success: 'border border-success',
-  warning: 'border border-warning',
-  danger: 'border border-destructive',
-  info: 'border border-primary-200',
-  muted: 'border border-border',
-};
-
-const fg: Record<BadgeTone, string> = {
-  default: 'text-slate-700',
-  primary: 'text-primary-700',
-  success: 'text-success',
-  warning: 'text-warning',
-  danger: 'text-destructive',
-  info: 'text-primary-700',
-  muted: 'text-slate-500',
-};
-
-/** Flatten React children to a string (RN requires text inside <Text>). */
 function flattenChildren(children: React.ReactNode): string {
   if (children == null || children === false) return '';
   if (typeof children === 'string' || typeof children === 'number') return String(children);
@@ -62,16 +32,67 @@ export const Badge: React.FC<BadgeProps> = ({
   outline,
   className,
   children,
-}) => (
-  <View
-    className={cn(
-      'px-2 py-0.5 rounded-full self-start',
-      outline ? outlineSurface[tone] : surface[tone],
-      className,
-    )}
-  >
-    <Text size="xs" weight="medium" className={fg[tone]}>
-      {flattenChildren(children)}
-    </Text>
-  </View>
-);
+}) => {
+  const { colors } = useTheme();
+
+  const styles = React.useMemo(() => {
+    const base = {
+      default: {
+        bg: colors.secondary,
+        border: colors.border,
+        text: colors.foreground,
+      },
+      primary: {
+        bg: colors.primaryMuted,
+        border: colors.primary,
+        text: colors.primary,
+      },
+      success: {
+        bg: 'rgba(40, 199, 111, 0.12)',
+        border: colors.success,
+        text: colors.success,
+      },
+      warning: {
+        bg: 'rgba(255, 159, 67, 0.12)',
+        border: colors.warning,
+        text: colors.warning,
+      },
+      danger: {
+        bg: 'rgba(255, 76, 81, 0.12)',
+        border: colors.destructive,
+        text: colors.destructive,
+      },
+      info: {
+        bg: 'rgba(0, 186, 209, 0.12)',
+        border: colors.info,
+        text: colors.info,
+      },
+      muted: {
+        bg: colors.muted,
+        border: colors.border,
+        text: colors.mutedForeground,
+      },
+    }[tone];
+
+    return {
+      backgroundColor: outline ? 'transparent' : base.bg,
+      borderColor: base.border,
+      color: base.text,
+    };
+  }, [colors, tone, outline]);
+
+  return (
+    <View
+      className={cn('px-2 py-0.5 rounded-full self-start border', className)}
+      style={{
+        backgroundColor: styles.backgroundColor,
+        borderColor: styles.borderColor,
+        borderWidth: outline ? 1 : 0,
+      }}
+    >
+      <Text size="xs" weight="medium" style={{ color: styles.color }}>
+        {flattenChildren(children)}
+      </Text>
+    </View>
+  );
+};

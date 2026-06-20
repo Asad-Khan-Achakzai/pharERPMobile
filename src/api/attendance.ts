@@ -1,5 +1,6 @@
 import { api, unwrap } from './client';
 import type { Attendance } from '@/domain/types';
+import type { ID } from '@/domain/types';
 
 /**
  * Attendance mobile client — matches backend `attendance.routes.js`
@@ -25,13 +26,25 @@ export interface CheckOutInput {
   clientUuid?: string;
 }
 
+export interface TeamTodayEmployee {
+  employeeId: string;
+  name: string;
+  status: string;
+  checkInTime?: string | null;
+  checkOutTime?: string | null;
+  hasCheckedOut?: boolean;
+  lateMinutes?: number | null;
+  shiftName?: string | null;
+  scheduleLabel?: string | null;
+  attendanceLocationStatus?: 'WITHIN_ZONE' | 'OUT_OF_ZONE';
+  distanceFromCheckInPoint?: number | null;
+  requiredCheckInLocation?: { name?: string; latitude?: number; longitude?: number };
+}
+
 export interface TeamTodayBoard {
   businessDate?: string;
-  employees?: Array<{
-    employeeId: string;
-    name: string;
-    status: string;
-  }>;
+  attendanceSystemMode?: 'LEGACY' | 'CHECKIN_POLICY_V2';
+  employees?: TeamTodayEmployee[];
   summary?: {
     presentPayroll?: number;
     present?: number;
@@ -39,17 +52,19 @@ export interface TeamTodayBoard {
     absent?: number;
     pendingLateApproval?: number;
     totalEmployees?: number;
+    halfDay?: number;
+    leave?: number;
+    lateToday?: number;
+    missingCheckoutToday?: number;
+    outOfZoneToday?: number;
+    withinZoneToday?: number;
   };
 }
 
 export const attendanceApi = {
-  async teamToday(): Promise<TeamTodayBoard | null> {
-    try {
-      const resp = await api.get('/attendance/today');
-      return unwrap<TeamTodayBoard>(resp);
-    } catch {
-      return null;
-    }
+  async teamToday(): Promise<TeamTodayBoard> {
+    const resp = await api.get('/attendance/today');
+    return unwrap<TeamTodayBoard>(resp);
   },
   async meToday(): Promise<Attendance | null> {
     try {
@@ -112,6 +127,23 @@ export const attendanceApi = {
       return unwrap<import('@/domain/types').LiveRepLocation[]>(resp);
     } catch {
       return [];
+    }
+  },
+
+  async monthlySummary(employeeId: ID, month: string): Promise<{
+    month: string;
+    presentDays: number;
+    absentDays: number;
+    halfDays: number;
+    leaveDays: number;
+  } | null> {
+    try {
+      const resp = await api.get('/attendance/monthly-summary', {
+        params: { employeeId: String(employeeId), month },
+      });
+      return unwrap(resp);
+    } catch {
+      return null;
     }
   },
 };

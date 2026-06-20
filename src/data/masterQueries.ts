@@ -10,6 +10,7 @@ import { weeklyPlansApi } from '@/api/weeklyPlans';
 import { planItemsApi } from '@/api/planItems';
 import { territoriesApi } from '@/api/territories';
 import { useAuthStore } from '@/state/authStore';
+import { hasAnyPermission } from '@/auth/rbac';
 import { masterCache, MASTER_KV } from './masterCache';
 import { isOfflineApiError } from './masterSync';
 import { pendingSync } from './pendingSync';
@@ -195,13 +196,21 @@ export const masterQueries = {
   async weeklyPlansList(scope: 'mine' | 'team' = 'mine'): Promise<WeeklyPlan[]> {
     const cid = companyId();
     const uid = userId();
+    const user = useAuthStore.getState().user;
+    const isAdmin = hasAnyPermission(user, ['admin.access']);
+    const canSeeTeam = hasAnyPermission(user, [
+      'team.view',
+      'team.viewAllReports',
+      'admin.access',
+    ]);
     const kvKey =
       scope === 'team' ? MASTER_KV.weeklyPlansTeam : MASTER_KV.weeklyPlansMine(uid);
     try {
-      const plans = await weeklyPlansApi.list({
-        limit: 100,
-        ...(scope === 'team' ? { scope: 'team' } : {}),
-      });
+      const listParams: Parameters<typeof weeklyPlansApi.list>[0] = { limit: 100 };
+      if (!isAdmin && canSeeTeam) {
+        listParams.scope = scope === 'team' ? 'team' : 'self';
+      }
+      const plans = await weeklyPlansApi.list(listParams);
       await masterCache.upsertWeeklyPlans(cid, uid, plans);
       await masterCache.setWeeklyPlansList(kvKey, plans);
       return plans;

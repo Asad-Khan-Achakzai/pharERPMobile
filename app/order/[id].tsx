@@ -10,7 +10,7 @@ import { Text, H2, Subtitle } from '@/ui/Text';
 import { Badge } from '@/ui/Badge';
 import { Button } from '@/ui/Button';
 import { Divider } from '@/ui/ListRow';
-import { SkeletonRow } from '@/ui/Skeleton';
+import { DetailPageSkeleton } from '@/ui/listCardSkeletons';
 import { useToast } from '@/ui/Toast';
 import { ordersApi } from '@/api/orders';
 import type { DeliveryRecord } from '@/domain/types';
@@ -58,9 +58,7 @@ export default function OrderDetail() {
     <Screen padded={false}>
       <Header back title="Order" subtitle={q.data?.orderNumber ?? id?.slice(-8)} />
       {q.isLoading || !q.data ? (
-        <View className="px-4">
-          <SkeletonRow count={5} />
-        </View>
+        <DetailPageSkeleton itemRows={4} />
       ) : (
         <>
           <Card className="mx-4 mt-2">

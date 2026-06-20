@@ -1,7 +1,8 @@
 import * as React from 'react';
-import { Pressable, PressableProps, ActivityIndicator, View } from 'react-native';
+import { Pressable, PressableProps, ActivityIndicator, View, ViewStyle } from 'react-native';
 import { Text } from './Text';
 import { cn } from '@/utils/cn';
+import { useTheme } from '@/theme/ThemeProvider';
 
 export type ButtonVariant =
   | 'primary'
@@ -26,24 +27,6 @@ interface ButtonProps extends Omit<PressableProps, 'children'> {
   textClassName?: string;
   testID?: string;
 }
-
-const surface: Record<ButtonVariant, string> = {
-  primary: 'bg-primary active:bg-primary-700',
-  secondary: 'bg-secondary active:bg-slate-200 border border-border',
-  outline: 'bg-transparent border border-border active:bg-muted',
-  ghost: 'bg-transparent active:bg-muted',
-  destructive: 'bg-destructive active:opacity-90',
-  success: 'bg-success active:opacity-90',
-};
-
-const labelTone: Record<ButtonVariant, string> = {
-  primary: 'text-white',
-  secondary: 'text-slate-900',
-  outline: 'text-slate-900',
-  ghost: 'text-slate-900',
-  destructive: 'text-white',
-  success: 'text-white',
-};
 
 const sizing: Record<ButtonSize, string> = {
   sm: 'h-9 px-3 rounded-lg',
@@ -82,42 +65,78 @@ export const Button: React.FC<ButtonProps> = ({
   className,
   textClassName,
   children,
+  style,
   ...rest
 }) => {
+  const { colors } = useTheme();
   const isDisabled = disabled || loading;
+
+  const surfaceStyle: ViewStyle = (() => {
+    switch (variant) {
+      case 'primary':
+        return { backgroundColor: colors.primary, borderWidth: 0 };
+      case 'secondary':
+        return {
+          backgroundColor: colors.secondary,
+          borderWidth: 1,
+          borderColor: colors.border,
+        };
+      case 'outline':
+        return {
+          backgroundColor: 'transparent',
+          borderWidth: 1,
+          borderColor: colors.border,
+        };
+      case 'ghost':
+        return { backgroundColor: 'transparent', borderWidth: 0 };
+      case 'destructive':
+        return { backgroundColor: colors.destructive, borderWidth: 0 };
+      case 'success':
+        return { backgroundColor: colors.success, borderWidth: 0 };
+      default:
+        return {};
+    }
+  })();
+
+  const labelColor =
+    variant === 'primary' ||
+    variant === 'destructive' ||
+    variant === 'success'
+      ? colors.primaryForeground
+      : colors.foreground;
+
+  const spinnerColor =
+    variant === 'primary' ||
+    variant === 'destructive' ||
+    variant === 'success'
+      ? colors.primaryForeground
+      : colors.foreground;
+
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       disabled={isDisabled}
       {...rest}
+      style={[surfaceStyle, style as ViewStyle]}
       className={cn(
         'flex-row items-center justify-center',
         sizing[size],
-        surface[variant],
         fullWidth && 'w-full',
         isDisabled && 'opacity-50',
         className,
       )}
     >
       {loading ? (
-        <ActivityIndicator
-          size="small"
-          color={
-            variant === 'primary' ||
-            variant === 'destructive' ||
-            variant === 'success'
-              ? '#fff'
-              : '#0f172a'
-          }
-        />
+        <ActivityIndicator size="small" color={spinnerColor} />
       ) : (
         <View className="flex-row items-center">
           {leftIcon ? <View className="mr-2">{leftIcon}</View> : null}
           {isTextLikeChildren(children) ? (
             <Text
               weight="medium"
-              className={cn(labelSize[size], labelTone[variant], textClassName)}
+              className={cn(labelSize[size], textClassName)}
+              style={{ color: labelColor }}
             >
               {flattenChildren(children)}
             </Text>

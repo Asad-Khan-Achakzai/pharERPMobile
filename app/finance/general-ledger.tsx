@@ -8,9 +8,10 @@ import { Header } from '@/ui/Header';
 import { Card } from '@/ui/Card';
 import { Text } from '@/ui/Text';
 import { Button } from '@/ui/Button';
-import { SkeletonRow } from '@/ui/Skeleton';
+import { ListSkeletonList } from '@/ui/listCardSkeletons';
 import { EmptyState } from '@/ui/EmptyState';
 import { PermissionGate } from '@/auth/PermissionGate';
+import { useThemedIcons } from '@/hooks/useThemedIcons';
 import { accountingReportsApi, type GeneralLedgerEntry } from '@/api/accountingReports';
 import { formatPkr } from '@/api/ledger';
 import {
@@ -21,6 +22,7 @@ import {
 } from '@/features/finance/GeneralLedgerFilterSheet';
 
 function GeneralLedgerImpl() {
+  const icons = useThemedIcons();
   const [filters, setFilters] = React.useState<GeneralLedgerFilters>(emptyGeneralLedgerFilters);
   const [filterOpen, setFilterOpen] = React.useState(false);
 
@@ -59,7 +61,7 @@ function GeneralLedgerImpl() {
             variant="ghost"
             size="sm"
             onPress={() => setFilterOpen(true)}
-            leftIcon={<SlidersHorizontal size={16} color="#0f172a" />}
+            leftIcon={<SlidersHorizontal size={16} color={icons.foreground} />}
           >
             {activeFilterCount > 0 ? `Filters (${activeFilterCount})` : 'Filters'}
           </Button>
@@ -102,9 +104,7 @@ function GeneralLedgerImpl() {
       ) : null}
 
       {report.isLoading ? (
-        <View className="px-4">
-          <SkeletonRow count={6} />
-        </View>
+        <ListSkeletonList count={6} variant="ledger" />
       ) : entries.length === 0 ? (
         <EmptyState
           title="No entries"

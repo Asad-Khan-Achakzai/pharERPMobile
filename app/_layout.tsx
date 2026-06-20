@@ -9,6 +9,8 @@ import {
   landingRouteForUser,
 } from '@/auth/navigation';
 import '../global.css';
+/** Background location task — must load before the app tree mounts. */
+import '@/features/tracking/backgroundLocationTask';
 
 /**
  * RouterGuard — field-first navigation (Web Parity Contract §3).

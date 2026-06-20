@@ -41,11 +41,13 @@ import { Button } from '@/ui/Button';
 import { Badge } from '@/ui/Badge';
 import { Tabs } from '@/ui/Tabs';
 import { TextField } from '@/ui/TextField';
-import { SkeletonRow } from '@/ui/Skeleton';
-import { EmptyState } from '@/ui/EmptyState';
+import { ListSkeletonList } from '@/ui/listCardSkeletons';
+import { EmptyState, ThemedEmptyIcon } from '@/ui/EmptyState';
 import { useToast } from '@/ui/Toast';
+import { useThemedIcons } from '@/hooks/useThemedIcons';
 import { weeklyPlansApi } from '@/api/weeklyPlans';
 import { attendanceRequestsApi } from '@/api/attendanceRequests';
+import { expensesApi } from '@/api/expenses';
 import { ExpensesApprovalQueue } from '@/features/expenses/ExpensesApprovalQueue';
 import { usePermissions } from '@/hooks/usePermissions';
 import type {
@@ -80,6 +82,62 @@ const PLAN_APPROVE_PERMISSIONS = ['weeklyPlans.review', 'weeklyPlans.approve'];
 
 const EXPENSE_APPROVE_PERMISSIONS = ['expenses.approve', 'admin.access'];
 
+function useApprovalsTabCounts(options: {
+  showAttendance: boolean;
+  useGovernance: boolean;
+  showPlans: boolean;
+  showExpenses: boolean;
+}) {
+  const { showAttendance, useGovernance, showPlans, showExpenses } = options;
+
+  const attendance = useQuery({
+    queryKey: ['attendance', 'requests', useGovernance ? 'governance' : 'inbox'],
+    enabled: showAttendance,
+    queryFn: () =>
+      useGovernance
+        ? attendanceRequestsApi.governanceQueue({ sort: 'newest', limit: 300 })
+        : attendanceRequestsApi.inbox({ sort: 'newest', limit: 100 }),
+    staleTime: 30_000,
+  });
+
+  const plans = useQuery({
+    queryKey: ['plans', 'pending'],
+    enabled: showPlans,
+    queryFn: () => weeklyPlansApi.pendingApprovals(),
+    staleTime: 30_000,
+  });
+
+  const expenses = useQuery({
+    queryKey: ['expenses', 'inbox'],
+    enabled: showExpenses,
+    queryFn: () => expensesApi.inbox(),
+    staleTime: 30_000,
+  });
+
+  return {
+    attendance:
+      showAttendance && attendance.data != null ? attendance.data.length : undefined,
+    plans: showPlans && plans.data != null ? plans.data.length : undefined,
+    expenses: showExpenses && expenses.data != null ? expenses.data.length : undefined,
+    isReady:
+      (!showAttendance || attendance.data != null) &&
+      (!showPlans || plans.data != null) &&
+      (!showExpenses || expenses.data != null),
+  };
+}
+
+/** Left-to-right default; auto-focus the sole tab with pending items when exactly one has a count. */
+function resolveInitialApprovalsSegment(
+  counts: { attendance?: number; plans?: number; expenses?: number },
+  fallback: Segment
+): Segment {
+  const pending: Segment[] = [];
+  if ((counts.attendance ?? 0) > 0) pending.push('attendance');
+  if ((counts.plans ?? 0) > 0) pending.push('plans');
+  if ((counts.expenses ?? 0) > 0) pending.push('expenses');
+  return pending.length === 1 ? pending[0]! : fallback;
+}
+
 function nameOf(value: unknown): string | null {
   if (!value || typeof value !== 'object') return null;
   return (value as { name?: string }).name ?? null;
@@ -104,28 +162,57 @@ export default function Approvals() {
   const canApprovePlans = canAny(PLAN_APPROVE_PERMISSIONS);
   const canApproveExpenses = canAny(EXPENSE_APPROVE_PERMISSIONS);
 
-  const [segment, setSegment] = React.useState<Segment>(
-    canApproveAttendance || canGovernance ? 'attendance' : canApproveExpenses ? 'expenses' : 'plans'
+  const showAttendance = canApproveAttendance || canGovernance;
+
+  const tabCounts = useApprovalsTabCounts({
+    showAttendance,
+    useGovernance: canGovernance,
+    showPlans: canApprovePlans,
+    showExpenses: canApproveExpenses,
+  });
+
+  const defaultSegment = React.useMemo<Segment>(
+    () => (showAttendance ? 'attendance' : canApproveExpenses ? 'expenses' : 'plans'),
+    [showAttendance, canApproveExpenses]
   );
+
+  const [segment, setSegment] = React.useState<Segment>(defaultSegment);
+  const initialSegmentResolved = React.useRef(false);
+
+  React.useEffect(() => {
+    if (initialSegmentResolved.current || !tabCounts.isReady) return;
+    setSegment(
+      resolveInitialApprovalsSegment(
+        {
+          attendance: tabCounts.attendance,
+          plans: tabCounts.plans,
+          expenses: tabCounts.expenses,
+        },
+        defaultSegment
+      )
+    );
+    initialSegmentResolved.current = true;
+  }, [tabCounts, defaultSegment]);
 
   return (
     <Screen padded={false} scroll={false}>
-      <Header title="Approvals" subtitle="Pending requests from your team" />
+      <Header back title="Approvals" subtitle="Pending requests from your team" />
 
-      <View className="px-4 pt-2 pb-2">
+      <View className="pt-2 pb-2">
         <Tabs
           value={segment}
           onChange={(k) => setSegment(k as Segment)}
+          scrollable
           items={[
-            { key: 'attendance', label: 'Attendance' },
-            { key: 'plans', label: 'Weekly plans' },
-            { key: 'expenses', label: 'Expenses' },
+            { key: 'attendance', label: 'Attendance', count: tabCounts.attendance },
+            { key: 'plans', label: 'Weekly plans', count: tabCounts.plans },
+            { key: 'expenses', label: 'Expenses', count: tabCounts.expenses },
           ]}
         />
       </View>
 
       {segment === 'attendance' ? (
-        canApproveAttendance || canGovernance ? (
+        showAttendance ? (
           <AttendanceQueue
             useGovernance={canGovernance}
             qc={qc}
@@ -133,7 +220,7 @@ export default function Approvals() {
           />
         ) : (
           <EmptyState
-            icon={<ClipboardCheck size={28} color="#94a3b8" />}
+            icon={<ThemedEmptyIcon Icon={ClipboardCheck} />}
             title="No attendance approvals"
             description="Your role isn't part of the attendance approval chain."
           />
@@ -145,7 +232,7 @@ export default function Approvals() {
           <WeeklyPlansQueue qc={qc} toast={toast} />
         ) : (
           <EmptyState
-            icon={<ClipboardCheck size={28} color="#94a3b8" />}
+            icon={<ThemedEmptyIcon Icon={ClipboardCheck} />}
             title="No plan approvals"
             description="Your role doesn't review weekly plans."
           />
@@ -157,7 +244,7 @@ export default function Approvals() {
           <ExpensesApprovalQueue />
         ) : (
           <EmptyState
-            icon={<ClipboardCheck size={28} color="#94a3b8" />}
+            icon={<ThemedEmptyIcon Icon={ClipboardCheck} />}
             title="No expense approvals"
             description="Your role cannot approve field expenses."
           />
@@ -186,6 +273,7 @@ const AttendanceQueue: React.FC<AttendanceQueueProps> = ({
   qc,
   toast,
 }) => {
+  const icons = useThemedIcons();
   const [scope, setScope] = React.useState<Scope>('all');
   const [typeFilter, setTypeFilter] = React.useState<AttendanceRequestType | 'ALL'>('ALL');
   const [showFilters, setShowFilters] = React.useState(false);
@@ -253,16 +341,12 @@ const AttendanceQueue: React.FC<AttendanceQueueProps> = ({
   });
 
   if (list.isLoading) {
-    return (
-      <View className="px-4">
-        <SkeletonRow count={4} />
-      </View>
-    );
+    return <ListSkeletonList count={4} variant="approval" />;
   }
   if (!list.data || list.data.length === 0) {
     return (
       <EmptyState
-        icon={<ClipboardCheck size={28} color="#94a3b8" />}
+        icon={<ThemedEmptyIcon Icon={ClipboardCheck} />}
         title="No open requests"
         description={
           useGovernance
@@ -283,7 +367,7 @@ const AttendanceQueue: React.FC<AttendanceQueueProps> = ({
         <Button
           variant="ghost"
           size="sm"
-          leftIcon={<Filter size={14} color="#0f172a" />}
+          leftIcon={<Filter size={14} color={icons.foreground} />}
           onPress={() => setShowFilters((v) => !v)}
         >
           Filters
@@ -347,7 +431,9 @@ const AttendanceQueue: React.FC<AttendanceQueueProps> = ({
           <AttendanceRequestCard
             request={item}
             useGovernance={useGovernance}
-            busy={decide.isPending}
+            pendingRequestId={decide.isPending ? decide.variables?.id ?? null : null}
+            pendingAction={decide.isPending ? decide.variables?.action ?? null : null}
+            anyPending={decide.isPending}
             onApprove={() => decide.mutate({ id: item._id, action: 'approve' })}
             onRejectClick={() => {
               setRejectNote('');
@@ -362,7 +448,12 @@ const AttendanceQueue: React.FC<AttendanceQueueProps> = ({
         request={rejectFor}
         note={rejectNote}
         onNoteChange={setRejectNote}
-        busy={decide.isPending}
+        loading={
+          decide.isPending &&
+          decide.variables?.action === 'reject' &&
+          decide.variables?.id === rejectFor?._id
+        }
+        disabled={decide.isPending}
         onClose={() => setRejectFor(null)}
         onConfirm={() => {
           if (!rejectFor) return;
@@ -375,7 +466,12 @@ const AttendanceQueue: React.FC<AttendanceQueueProps> = ({
 
       <EscalateDialog
         request={escalateFor}
-        busy={decide.isPending}
+        loading={
+          decide.isPending &&
+          decide.variables?.action === 'escalate' &&
+          decide.variables?.id === escalateFor?._id
+        }
+        disabled={decide.isPending}
         onClose={() => setEscalateFor(null)}
         onConfirm={() => {
           if (!escalateFor) return;
@@ -392,7 +488,9 @@ const AttendanceQueue: React.FC<AttendanceQueueProps> = ({
 interface CardProps {
   request: AttendanceRequest;
   useGovernance: boolean;
-  busy: boolean;
+  pendingRequestId: ID | null;
+  pendingAction: 'approve' | 'reject' | 'escalate' | null;
+  anyPending: boolean;
   onApprove: () => void;
   onRejectClick: () => void;
   onEscalateClick: () => void;
@@ -401,7 +499,9 @@ interface CardProps {
 const AttendanceRequestCard: React.FC<CardProps> = ({
   request,
   useGovernance,
-  busy,
+  pendingRequestId,
+  pendingAction,
+  anyPending,
   onApprove,
   onRejectClick,
   onEscalateClick,
@@ -447,6 +547,9 @@ const AttendanceRequestCard: React.FC<CardProps> = ({
       ? `Step ${gov.currentStepDisplay ?? 1} of ${gov.stepTotal}`
       : null;
   const slaLine = slaSummary(gov?.slaMinutesRemaining);
+
+  const isThisRowPending = pendingRequestId === request._id;
+  const actionsLocked = anyPending && !isThisRowPending;
 
   return (
     <Card>
@@ -543,8 +646,7 @@ const AttendanceRequestCard: React.FC<CardProps> = ({
           size="sm"
           variant="outline"
           className="flex-1 mr-2"
-          loading={busy}
-          disabled={!canAct}
+          disabled={!canAct || actionsLocked || isThisRowPending}
           onPress={onRejectClick}
           leftIcon={<XCircle size={14} color="#ef4444" />}
         >
@@ -554,8 +656,7 @@ const AttendanceRequestCard: React.FC<CardProps> = ({
           size="sm"
           variant="ghost"
           className="flex-1 mr-2"
-          loading={busy}
-          disabled={!canAct}
+          disabled={!canAct || actionsLocked || isThisRowPending}
           onPress={onEscalateClick}
           leftIcon={<ArrowUpRightFromCircle size={14} color="#0f172a" />}
         >
@@ -564,8 +665,8 @@ const AttendanceRequestCard: React.FC<CardProps> = ({
         <Button
           size="sm"
           className="flex-1"
-          loading={busy}
-          disabled={!canAct}
+          loading={isThisRowPending && pendingAction === 'approve'}
+          disabled={!canAct || actionsLocked || (isThisRowPending && pendingAction !== 'approve')}
           onPress={onApprove}
           leftIcon={<CheckCircle2 size={14} color="#fff" />}
         >
@@ -583,7 +684,8 @@ const AttendanceRequestCard: React.FC<CardProps> = ({
 interface RejectDialogProps {
   request: AttendanceRequest | null;
   note: string;
-  busy: boolean;
+  loading: boolean;
+  disabled: boolean;
   onNoteChange: (v: string) => void;
   onClose: () => void;
   onConfirm: () => void;
@@ -592,7 +694,8 @@ interface RejectDialogProps {
 const RejectDialog: React.FC<RejectDialogProps> = ({
   request,
   note,
-  busy,
+  loading,
+  disabled,
   onNoteChange,
   onClose,
   onConfirm,
@@ -628,14 +731,14 @@ const RejectDialog: React.FC<RejectDialogProps> = ({
               variant="outline"
               onPress={onClose}
               className="flex-1 mr-2"
-              disabled={busy}
+              disabled={disabled}
             >
               Cancel
             </Button>
             <Button
               onPress={onConfirm}
-              loading={busy}
-              disabled={!valid}
+              loading={loading}
+              disabled={!valid || disabled}
               className="flex-1"
               leftIcon={<XCircle size={14} color="#fff" />}
             >
@@ -650,14 +753,16 @@ const RejectDialog: React.FC<RejectDialogProps> = ({
 
 interface EscalateDialogProps {
   request: AttendanceRequest | null;
-  busy: boolean;
+  loading: boolean;
+  disabled: boolean;
   onClose: () => void;
   onConfirm: () => void;
 }
 
 const EscalateDialog: React.FC<EscalateDialogProps> = ({
   request,
-  busy,
+  loading,
+  disabled,
   onClose,
   onConfirm,
 }) => (
@@ -681,13 +786,14 @@ const EscalateDialog: React.FC<EscalateDialogProps> = ({
             variant="outline"
             onPress={onClose}
             className="flex-1 mr-2"
-            disabled={busy}
+            disabled={disabled}
           >
             Cancel
           </Button>
           <Button
             onPress={onConfirm}
-            loading={busy}
+            loading={loading}
+            disabled={disabled}
             className="flex-1"
             leftIcon={<ArrowUpRightFromCircle size={14} color="#fff" />}
           >
@@ -740,21 +846,21 @@ const WeeklyPlansQueue: React.FC<QueueProps> = ({ qc, toast }) => {
   });
 
   if (list.isLoading) {
-    return (
-      <View className="px-4">
-        <SkeletonRow count={4} />
-      </View>
-    );
+    return <ListSkeletonList count={4} variant="approval" />;
   }
   if (!list.data || list.data.length === 0) {
     return (
       <EmptyState
-        icon={<ClipboardCheck size={28} color="#94a3b8" />}
+        icon={<ThemedEmptyIcon Icon={ClipboardCheck} />}
         title="Nothing to approve"
         description="Your team's weekly plans are all up to date."
       />
     );
   }
+
+  const approvingId = approve.isPending ? approve.variables ?? null : null;
+  const rejectingId = reject.isPending ? reject.variables?.id ?? null : null;
+  const anyPending = approve.isPending || reject.isPending;
 
   return (
     <>
@@ -775,6 +881,9 @@ const WeeklyPlansQueue: React.FC<QueueProps> = ({ qc, toast }) => {
             ? (item.medicalRepId as { name?: string }).name
             : null;
         const weekStart = item.weekStartDate ? parseISO(item.weekStartDate) : null;
+        const isApproving = approvingId === item._id;
+        const isRejecting = rejectingId === item._id;
+        const rowLocked = anyPending && !isApproving && !isRejecting;
         return (
           <Card>
             <Pressable onPress={() => pushWithReturn(`/plan/${item._id}`)}>
@@ -799,6 +908,7 @@ const WeeklyPlansQueue: React.FC<QueueProps> = ({ qc, toast }) => {
                 size="sm"
                 variant="outline"
                 className="flex-1 mr-2"
+                disabled={rowLocked || isApproving || isRejecting}
                 onPress={() => {
                   setRejectReason('');
                   setRejectFor(item);
@@ -810,6 +920,8 @@ const WeeklyPlansQueue: React.FC<QueueProps> = ({ qc, toast }) => {
               <Button
                 size="sm"
                 className="flex-1"
+                loading={isApproving}
+                disabled={rowLocked || isRejecting}
                 onPress={() => approve.mutate(item._id)}
                 leftIcon={<CheckCircle2 size={14} color="#fff" />}
               >
@@ -859,7 +971,7 @@ const WeeklyPlansQueue: React.FC<QueueProps> = ({ qc, toast }) => {
               <Button
                 className="flex-1"
                 loading={reject.isPending}
-                disabled={!rejectReason.trim()}
+                disabled={!rejectReason.trim() || reject.isPending}
                 onPress={() => {
                   if (!rejectFor) return;
                   reject.mutate({ id: rejectFor._id, reason: rejectReason.trim() });

@@ -2,33 +2,56 @@ import NetInfo, { type NetInfoState } from '@react-native-community/netinfo';
 import { api, ApiError } from '@/api/client';
 import { outbox, backoff, type CoreOutboxItem, type MediaOutboxItem } from './outbox';
 import { attendanceLocal } from './attendanceLocal';
+import { attendanceApi } from '@/api/attendance';
 import { localEntities } from './localEntities';
 import { useAuthStore } from '@/state/authStore';
+import {
+  connectionFromNetInfo,
+  type ConnectionInfo,
+  type ConnectionStrength,
+  type ConnectionType,
+} from '@/features/sync/connectionStatus';
 
 let running = false;
 let online = true;
 let unsubscribe: (() => void) | null = null;
 let listeners = new Set<() => void>();
+let attendanceRefreshListeners = new Set<() => void>();
 let ticker: ReturnType<typeof setInterval> | null = null;
+
+export type { ConnectionStrength, ConnectionType };
 
 export interface SyncStatus {
   online: boolean;
+  connectionType: ConnectionType;
+  connectionStrength: ConnectionStrength;
+  connectionLabel: string;
   inFlight: boolean;
   pending: { core: number; media: number; failed: number };
 }
 
+function applyConnection(info: ConnectionInfo): void {
+  online = info.online;
+  status = {
+    ...status,
+    online: info.online,
+    connectionType: info.type,
+    connectionStrength: info.strength,
+    connectionLabel: info.label,
+  };
+}
+
 let status: SyncStatus = {
   online: true,
+  connectionType: 'unknown',
+  connectionStrength: 3,
+  connectionLabel: 'Online',
   inFlight: false,
   pending: { core: 0, media: 0, failed: 0 },
 };
 
-/**
- * Use link connectivity only. `isInternetReachable === false` is common on
- * LAN-only Wi‑Fi (local backend) and incorrectly blocked sync before.
- */
-function computeOnline(state: NetInfoState): boolean {
-  return !!state.isConnected;
+function syncConnectionFromNetInfo(state: NetInfoState): void {
+  applyConnection(connectionFromNetInfo(state));
 }
 
 export function subscribeSyncStatus(fn: () => void): () => void {
@@ -36,6 +59,18 @@ export function subscribeSyncStatus(fn: () => void): () => void {
   return () => {
     listeners.delete(fn);
   };
+}
+
+/** Fired after an attendance outbox item syncs and server me/today is refreshed. */
+export function subscribeAttendanceRefresh(fn: () => void): () => void {
+  attendanceRefreshListeners.add(fn);
+  return () => {
+    attendanceRefreshListeners.delete(fn);
+  };
+}
+
+function emitAttendanceRefresh() {
+  for (const l of attendanceRefreshListeners) l();
 }
 
 export function getSyncStatus(): SyncStatus {
@@ -53,8 +88,7 @@ async function refreshCounts() {
 
 export async function refreshOnlineStatus(): Promise<boolean> {
   const state = await NetInfo.fetch();
-  online = computeOnline(state);
-  status = { ...status, online };
+  syncConnectionFromNetInfo(state);
   emit();
   return online;
 }
@@ -96,7 +130,17 @@ async function runCoreItem(item: CoreOutboxItem) {
     if (item.feature === 'attendance') {
       const uid = useAuthStore.getState().user?._id;
       if (uid) {
-        void attendanceLocal.clearLocal(String(uid));
+        const uidStr = String(uid);
+        await attendanceLocal.clearLocal(uidStr);
+        try {
+          const fresh = await attendanceApi.meToday();
+          if (fresh) {
+            await attendanceLocal.cacheMeToday(uidStr, fresh);
+          }
+          emitAttendanceRefresh();
+        } catch {
+          /* server me/today refresh is best-effort after sync */
+        }
       }
     }
   } catch (err) {
@@ -216,8 +260,7 @@ export function startSyncEngine(): void {
   });
 
   unsubscribe = NetInfo.addEventListener((state) => {
-    online = computeOnline(state);
-    status = { ...status, online };
+    syncConnectionFromNetInfo(state);
     emit();
     if (online) {
       void flushOutbox();

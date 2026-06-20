@@ -2,6 +2,8 @@ import * as React from 'react';
 import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { cn } from '@/utils/cn';
+import { useTheme } from '@/theme/ThemeProvider';
+import { useKeyboardInset } from '@/hooks/useKeyboardInset';
 
 interface StickyActionBarProps {
   children: React.ReactNode;
@@ -11,14 +13,25 @@ interface StickyActionBarProps {
 export const StickyActionBar: React.FC<StickyActionBarProps> = ({
   children,
   className,
-}) => (
-  <SafeAreaView
-    edges={['bottom']}
-    className={cn(
-      'absolute bottom-0 inset-x-0 bg-background border-t border-border',
-      className,
-    )}
-  >
-    <View className="px-4 py-3">{children}</View>
-  </SafeAreaView>
-);
+}) => {
+  const { colors } = useTheme();
+  const keyboardInset = useKeyboardInset();
+
+  return (
+    <SafeAreaView
+      edges={['bottom']}
+      style={{
+        position: 'absolute',
+        bottom: keyboardInset,
+        left: 0,
+        right: 0,
+        backgroundColor: colors.background,
+        borderTopWidth: 1,
+        borderTopColor: colors.border,
+      }}
+      className={cn(className)}
+    >
+      <View className="px-4 py-3">{children}</View>
+    </SafeAreaView>
+  );
+};

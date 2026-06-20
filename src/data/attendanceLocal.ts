@@ -89,6 +89,13 @@ export const attendanceLocal = {
     }
   ): LocalAttendanceRecord {
     const businessDate = format(new Date(capture.capturedAt), 'yyyy-MM-dd');
+    const gov = prev?.governance;
+    const strictLateApproval =
+      gov?.attendanceApprovalsEnabled &&
+      gov?.strictLateBlocking &&
+      !gov?.allowCheckInWhenLate;
+    const pendingLate =
+      !!capture.reason?.trim() || strictLateApproval;
     return {
       ...(prev ?? {}),
       businessDate,
@@ -96,14 +103,20 @@ export const attendanceLocal = {
       checkOutTime: null,
       status: 'PRESENT',
       canCheckIn: false,
-      canCheckOut: true,
-      uiStatus: capture.reason?.trim() ? 'LATE_CHECKIN_PENDING' : 'PRESENT',
+      canCheckOut: !pendingLate,
+      uiStatus: pendingLate ? 'LATE_CHECKIN_PENDING' : 'PRESENT',
+      lateCheckInApprovalStatus: pendingLate ? 'PENDING' : undefined,
       lat: capture.lat,
       lng: capture.lng,
       notes: capture.notes?.trim() || prev?.notes,
       _localPending: true,
       _pendingCheckIn: true,
       _syncState: 'pending',
+      // Server is source of truth for V2 zone — never set locally while pending
+      attendanceLocationStatus: undefined,
+      distanceFromCheckInPoint: undefined,
+      requiredCheckInLocation: undefined,
+      resolvedCheckInPolicy: undefined,
     };
   },
 

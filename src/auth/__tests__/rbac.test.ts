@@ -137,6 +137,13 @@ describe('navigation.field shell', () => {
     expect(canSeeScreen(u, 'rep_orders')).toBe(true);
     expect(canSeeScreen(u, 'manager_approvals')).toBe(false);
   });
+
+  test('field rep without targets.view can open KPI screen via weeklyPlans.view', () => {
+    const u = makeUser({
+      permissions: mrepPerms.filter((p) => p !== 'targets.view'),
+    });
+    expect(canSeeScreen(u, 'kpi')).toBe(true);
+  });
 });
 
 describe('rbac helpers', () => {

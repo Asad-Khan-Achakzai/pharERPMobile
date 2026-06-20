@@ -3,7 +3,6 @@ import {
   View,
   ScrollView,
   ScrollViewProps,
-  KeyboardAvoidingView,
   Platform,
   RefreshControl,
 } from 'react-native';
@@ -20,6 +19,7 @@ interface ScreenProps {
   edges?: ('top' | 'bottom' | 'left' | 'right')[];
   padded?: boolean;
   background?: 'background' | 'muted';
+  /** @deprecated Keyboard handling is enabled automatically when scroll=true. */
   keyboardAvoid?: boolean;
   refreshing?: boolean;
   onRefresh?: () => void;
@@ -35,7 +35,7 @@ export const Screen: React.FC<ScreenProps> = ({
   edges = ['top'],
   padded = true,
   background = 'background',
-  keyboardAvoid = false,
+  keyboardAvoid: _keyboardAvoid,
   refreshing,
   onRefresh,
   scrollProps,
@@ -47,7 +47,10 @@ export const Screen: React.FC<ScreenProps> = ({
   const inner = scroll ? (
     <ScrollView
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+      automaticallyAdjustKeyboardInsets
       contentContainerClassName={contentClass}
+      contentContainerStyle={scrollProps?.contentContainerStyle}
       refreshControl={
         onRefresh ? (
           <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} />
@@ -61,17 +64,6 @@ export const Screen: React.FC<ScreenProps> = ({
     <View className={cn('flex-1', contentClass)}>{children}</View>
   );
 
-  const body = keyboardAvoid ? (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      className="flex-1"
-    >
-      {inner}
-    </KeyboardAvoidingView>
-  ) : (
-    inner
-  );
-
   const topConsumed = edges.includes('top');
   const surfaceColor = background === 'muted' ? colors.muted : colors.background;
   return (
@@ -82,7 +74,7 @@ export const Screen: React.FC<ScreenProps> = ({
       testID={testID}
     >
       <TopInsetConsumedContext.Provider value={topConsumed}>
-        {body}
+        {inner}
       </TopInsetConsumedContext.Provider>
     </SafeAreaView>
   );

@@ -12,6 +12,7 @@ import { ApiError } from '@/api/client';
 import { useAuthStore } from '@/state/authStore';
 import { usePushWithReturn } from '@/navigation/usePushWithReturn';
 import { weekRangeForPreset, type WeekPreset } from '@/features/weeklyPlan/weekUtils';
+import { useThemedIcons } from '@/hooks/useThemedIcons';
 import type { WeeklyPlan } from '@/domain/types';
 
 interface CreatePlanSheetProps {
@@ -28,6 +29,7 @@ export const CreatePlanSheet: React.FC<CreatePlanSheetProps> = ({
   const pushWithReturn = usePushWithReturn();
   const toast = useToast();
   const user = useAuthStore((s) => s.user);
+  const icons = useThemedIcons();
 
   const create = useMutation({
     mutationFn: async (preset: WeekPreset) => {
@@ -72,7 +74,7 @@ export const CreatePlanSheet: React.FC<CreatePlanSheetProps> = ({
     >
       <PressableCard className="mb-2" onPress={() => openWeek('current')}>
         <View className="flex-row items-center">
-          <Calendar size={20} color="#0f172a" />
+          <Calendar size={20} color={icons.foreground} />
           <View className="flex-1 mx-3">
             <Text size="base" weight="semibold">
               This week
@@ -81,13 +83,13 @@ export const CreatePlanSheet: React.FC<CreatePlanSheetProps> = ({
               {current.label}
             </Text>
           </View>
-          <ChevronRight size={18} color="#94a3b8" />
+          <ChevronRight size={18} color={icons.muted} />
         </View>
       </PressableCard>
 
       <PressableCard className="mb-3" onPress={() => openWeek('next')}>
         <View className="flex-row items-center">
-          <Calendar size={20} color="#0f172a" />
+          <Calendar size={20} color={icons.foreground} />
           <View className="flex-1 mx-3">
             <Text size="base" weight="semibold">
               Next week
@@ -96,7 +98,7 @@ export const CreatePlanSheet: React.FC<CreatePlanSheetProps> = ({
               {next.label}
             </Text>
           </View>
-          <ChevronRight size={18} color="#94a3b8" />
+          <ChevronRight size={18} color={icons.muted} />
         </View>
       </PressableCard>
 

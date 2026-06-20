@@ -7,6 +7,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { Text } from './Text';
+import { useTheme } from '@/theme/ThemeProvider';
 
 type Tone = 'info' | 'success' | 'danger' | 'warning';
 
@@ -62,16 +63,26 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 };
 
-const toneSurface: Record<Tone, string> = {
-  info: 'bg-slate-900',
-  success: 'bg-success',
-  danger: 'bg-destructive',
-  warning: 'bg-warning',
-};
-
 const ToastBubble: React.FC<{ item: ToastItem; onDone(): void }> = ({ item, onDone }) => {
+  const { colors } = useTheme();
   const opacity = useSharedValue(0);
   const translate = useSharedValue(20);
+
+  const backgroundColor = (() => {
+    switch (item.tone) {
+      case 'success':
+        return colors.success;
+      case 'danger':
+        return colors.destructive;
+      case 'warning':
+        return colors.warning;
+      default:
+        return colors.card;
+    }
+  })();
+
+  const textTone = item.tone === 'info' ? 'default' : 'inverse';
+
   React.useEffect(() => {
     opacity.value = withTiming(1, { duration: 180 });
     translate.value = withTiming(0, { duration: 220 });
@@ -88,13 +99,16 @@ const ToastBubble: React.FC<{ item: ToastItem; onDone(): void }> = ({ item, onDo
     transform: [{ translateY: translate.value }],
   }));
   return (
-    <Animated.View style={aStyle} className={`mt-2 rounded-xl px-4 py-3 ${toneSurface[item.tone]}`}>
+    <Animated.View
+      style={[aStyle, { backgroundColor, borderColor: colors.border }]}
+      className="mt-2 rounded-xl px-4 py-3 border"
+    >
       {item.title ? (
-        <Text size="sm" weight="semibold" tone="inverse">
+        <Text size="sm" weight="semibold" tone={textTone}>
           {item.title}
         </Text>
       ) : null}
-      <Text size="sm" tone="inverse">
+      <Text size="sm" tone={textTone}>
         {item.message}
       </Text>
     </Animated.View>

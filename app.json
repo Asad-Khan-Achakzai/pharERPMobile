@@ -9,7 +9,14 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "UIBackgroundModes": ["location"],
+        "NSLocationWhenInUseUsageDescription": "PharmaERP uses your location for attendance check-in and visit verification.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "PharmaERP shares your location with your manager while you are checked in, including when the app is in the background.",
+        "NSLocationAlwaysUsageDescription": "PharmaERP shares your location with your manager while you are checked in, including when the app is in the background."
+      },
+      "bundleIdentifier": "com.asadkhanachakzie.pharmamobileapp"
     },
     "android": {
       "adaptiveIcon": {
@@ -19,16 +26,22 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
+      "softwareKeyboardLayoutMode": "resize",
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION",
         "android.permission.USE_BIOMETRIC",
-        "android.permission.USE_FINGERPRINT"
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.POST_NOTIFICATIONS"
       ],
-      "package": "com.asadkhanachakzie.pharmamobileapp"
+      "package": "com.asadkhanachakzie.pharmamobileapp",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "output": "static",
@@ -59,7 +72,12 @@
   [
     "expo-location",
     {
-      "locationAlwaysAndWhenInUsePermission": "Allow PharmaERP to use your location for attendance and visit verification."
+      "locationWhenInUsePermission": "PharmaERP uses your location for attendance check-in and visit verification.",
+      "locationAlwaysAndWhenInUsePermission": "PharmaERP shares your location with your manager while you are checked in, including when the app is in the background.",
+      "locationAlwaysPermission": "PharmaERP shares your location with your manager while you are checked in, including when the app is in the background.",
+      "isIosBackgroundLocationEnabled": true,
+      "isAndroidBackgroundLocationEnabled": true,
+      "isAndroidForegroundServiceEnabled": true
     }
   ],
   [
@@ -74,7 +92,15 @@
       "faceIDPermission": "Allow PharmaERP to use Face ID to unlock."
     }
   ],
-  "@react-native-community/datetimepicker"
+  "@react-native-community/datetimepicker",
+  [
+    "expo-notifications",
+    {
+      "icon": "./assets/images/icon.png",
+      "color": "#2563eb",
+      "defaultChannel": "default"
+    }
+  ]
 ],
     "experiments": {
       "typedRoutes": true,

@@ -13,12 +13,11 @@ import * as React from 'react';
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Screen } from '@/ui/Screen';
+import { FormScreen } from '@/ui/FormScreen';
 import { Header } from '@/ui/Header';
 import { Card } from '@/ui/Card';
 import { TextField } from '@/ui/TextField';
 import { Button } from '@/ui/Button';
-import { StickyActionBar } from '@/ui/StickyActionBar';
 import { useToast } from '@/ui/Toast';
 import { pharmaciesApi, type PharmacyCreateInput } from '@/api/pharmacies';
 import { PermissionGate } from '@/auth/PermissionGate';
@@ -95,9 +94,19 @@ function NewPharmacyImpl() {
   });
 
   return (
-    <Screen padded={false} keyboardAvoid>
-      <Header back title="Add pharmacy" />
-
+    <FormScreen
+      header={<Header back title="Add pharmacy" />}
+      footer={
+        <Button
+          onPress={() => create.mutate()}
+          loading={create.isPending}
+          disabled={!valid}
+          fullWidth
+        >
+          Save pharmacy
+        </Button>
+      }
+    >
       <Card className="mx-4 mt-2">
         <TextField label="Name" required value={draft.name} onChangeText={(v) => set('name', v)} />
         <TextField
@@ -151,20 +160,7 @@ function NewPharmacyImpl() {
           />
         </View>
       </Card>
-
-      <View style={{ height: 12 }} />
-
-      <StickyActionBar>
-        <Button
-          onPress={() => create.mutate()}
-          loading={create.isPending}
-          disabled={!valid}
-          fullWidth
-        >
-          Save pharmacy
-        </Button>
-      </StickyActionBar>
-    </Screen>
+    </FormScreen>
   );
 }
 

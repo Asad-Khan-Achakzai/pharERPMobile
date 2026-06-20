@@ -12,18 +12,16 @@
  *  mirroring web.
  */
 import * as React from 'react';
-import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
-import { Screen } from '@/ui/Screen';
+import { FormScreen } from '@/ui/FormScreen';
 import { Header } from '@/ui/Header';
 import { Card } from '@/ui/Card';
 import { TextField } from '@/ui/TextField';
 import { Button } from '@/ui/Button';
 import { Text } from '@/ui/Text';
-import { StickyActionBar } from '@/ui/StickyActionBar';
 import { useToast } from '@/ui/Toast';
 import { doctorsApi } from '@/api/doctors';
 import { ApiError } from '@/api/client';
@@ -151,9 +149,19 @@ function NewDoctorImpl() {
   });
 
   return (
-    <Screen padded={false} keyboardAvoid>
-      <Header back title="Add doctor" />
-
+    <FormScreen
+      header={<Header back title="Add doctor" />}
+      footer={
+        <Button
+          onPress={() => create.mutate()}
+          loading={create.isPending}
+          disabled={!valid}
+          fullWidth
+        >
+          Save doctor
+        </Button>
+      }
+    >
       <Card className="mx-4 mt-2">
         <TextField label="Name" required value={draft.name} onChangeText={(v) => set('name', v)} />
         <TextField
@@ -248,20 +256,7 @@ function NewDoctorImpl() {
           This company requires manager approval before the doctor becomes visit-able.
         </Text>
       ) : null}
-
-      <View style={{ height: 12 }} />
-
-      <StickyActionBar>
-        <Button
-          onPress={() => create.mutate()}
-          loading={create.isPending}
-          disabled={!valid}
-          fullWidth
-        >
-          Save doctor
-        </Button>
-      </StickyActionBar>
-    </Screen>
+    </FormScreen>
   );
 }
 

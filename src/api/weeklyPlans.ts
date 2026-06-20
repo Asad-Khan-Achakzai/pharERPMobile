@@ -1,5 +1,5 @@
 import { api, unwrap } from './client';
-import type { BulkPlanItemInput, ID, PlanItem, WeeklyPlan, WeeklyPlanDetail } from '@/domain/types';
+import type { BulkPlanItemInput, CheckInConfiguration, ID, PlanItem, WeeklyPlan, WeeklyPlanDetail } from '@/domain/types';
 
 export type { WeeklyPlan, WeeklyPlanDetail };
 
@@ -18,6 +18,7 @@ export interface UpdateWeeklyPlanInput {
   weekStartDate?: string;
   weekEndDate?: string;
   status?: WeeklyPlan['status'];
+  checkInConfiguration?: CheckInConfiguration | null;
 }
 
 export const weeklyPlansApi = {

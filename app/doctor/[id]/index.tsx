@@ -11,7 +11,7 @@ import { Text, H2, Subtitle } from '@/ui/Text';
 import { Badge } from '@/ui/Badge';
 import { Button } from '@/ui/Button';
 import { ListRow, Divider } from '@/ui/ListRow';
-import { SkeletonRow } from '@/ui/Skeleton';
+import { DoctorProfilePageSkeleton, ListSkeletonList } from '@/ui/listCardSkeletons';
 import { StickyActionBar } from '@/ui/StickyActionBar';
 import { masterQueries } from '@/data/masterQueries';
 import { doctorsApi } from '@/api/doctors';
@@ -31,9 +31,12 @@ export default function DoctorProfile() {
 
   if (q.isLoading || !q.data) {
     return (
-      <Screen padded>
-        <SkeletonRow count={6} />
-      </Screen>
+      <View className="flex-1 bg-background">
+        <Header back title="Doctor" />
+        <Screen padded={false} edges={['bottom']}>
+          <DoctorProfilePageSkeleton />
+        </Screen>
+      </View>
     );
   }
   const d = q.data;
@@ -126,9 +129,7 @@ export default function DoctorProfile() {
           </View>
           <Divider />
           {visits.isLoading ? (
-            <View className="px-4 py-4">
-              <SkeletonRow count={3} />
-            </View>
+            <ListSkeletonList count={2} variant="visit" className="px-4 py-4" />
           ) : (visits.data ?? []).length === 0 ? (
             <View className="px-4 py-4">
               <Text size="sm" tone="muted">

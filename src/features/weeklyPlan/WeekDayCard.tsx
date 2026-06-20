@@ -8,8 +8,11 @@ import { Button } from '@/ui/Button';
 import { TextField } from '@/ui/TextField';
 import { TimePickerField } from '@/ui/TimePickerField';
 import { Badge } from '@/ui/Badge';
+import { useThemedIcons } from '@/hooks/useThemedIcons';
 import type { PlanItem } from '@/domain/types';
 import type { DayDraftState, VisitDraft } from '@/hooks/usePlanDraftStorage';
+
+const draftCardClassName = 'mb-2 p-2 rounded-lg border border-warning/30 bg-warning/10';
 
 function savedDoctorName(item: PlanItem): string {
   const d = item.doctorId;
@@ -43,6 +46,7 @@ export const WeekDayCard: React.FC<WeekDayCardProps> = ({
   onOptimizeRoute,
   optimizing = false,
 }) => {
+  const icons = useThemedIcons();
   const dayLabel = format(parseISO(date), 'EEEE');
   const dateLabel = format(parseISO(date), 'd MMM');
 
@@ -80,7 +84,7 @@ export const WeekDayCard: React.FC<WeekDayCardProps> = ({
           className="mb-2 self-start"
           loading={optimizing}
           onPress={onOptimizeRoute}
-          leftIcon={<Route size={14} color="#2563eb" />}
+          leftIcon={<Route size={14} color={icons.primary} />}
         >
           Optimize route
         </Button>
@@ -92,7 +96,7 @@ export const WeekDayCard: React.FC<WeekDayCardProps> = ({
       ) : null}
 
       {savedVisits.map((it) => (
-        <View key={it._id} className="mb-2 pl-2 border-l-2 border-primary-200">
+        <View key={it._id} className="mb-2 pl-2 border-l-2 border-primary/40">
           <Text size="sm" weight="medium">
             {savedDoctorName(it)}
           </Text>
@@ -113,14 +117,14 @@ export const WeekDayCard: React.FC<WeekDayCardProps> = ({
       ))}
 
       {draft.visits.map((v, idx) => (
-        <View key={`${v.doctor._id}-${idx}`} className="mb-2 p-2 bg-amber-50/80 rounded-lg border border-amber-100">
+        <View key={`${v.doctor._id}-${idx}`} className={draftCardClassName}>
           <View className="flex-row items-center justify-between">
             <Text size="sm" weight="semibold">
               {v.doctor.name}
             </Text>
             {editable ? (
               <Button size="sm" variant="ghost" onPress={() => removeVisit(idx)}>
-                <Trash2 size={14} color="#ef4444" />
+                <Trash2 size={14} color={icons.destructive} />
               </Button>
             ) : null}
           </View>
@@ -153,7 +157,7 @@ export const WeekDayCard: React.FC<WeekDayCardProps> = ({
           size="sm"
           variant="outline"
           className="self-start mb-3"
-          leftIcon={<Plus size={14} color="#0f172a" />}
+          leftIcon={<Plus size={14} color={icons.foreground} />}
           onPress={onAddDoctors}
         >
           Add doctors
@@ -162,7 +166,7 @@ export const WeekDayCard: React.FC<WeekDayCardProps> = ({
 
       <Label className="mb-1">Tasks</Label>
       {savedTasks.map((it) => (
-        <View key={it._id} className="mb-2 pl-2 border-l-2 border-slate-200">
+        <View key={it._id} className="mb-2 pl-2 border-l-2 border-border">
           <Text size="sm" weight="medium">
             {it.title ?? 'Task'}
           </Text>
@@ -175,7 +179,7 @@ export const WeekDayCard: React.FC<WeekDayCardProps> = ({
       ))}
 
       {draft.otherTasks.map((task, idx) => (
-        <View key={idx} className="mb-2 p-2 bg-amber-50/80 rounded-lg border border-amber-100">
+        <View key={idx} className={draftCardClassName}>
           <TextField
             label="Task"
             value={task.title}

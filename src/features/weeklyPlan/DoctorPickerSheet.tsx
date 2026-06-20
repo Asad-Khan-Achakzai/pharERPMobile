@@ -8,9 +8,10 @@ import { SearchField } from '@/ui/SearchField';
 import { Badge } from '@/ui/Badge';
 import { PressableCard } from '@/ui/Card';
 import { Button } from '@/ui/Button';
-import { SkeletonRow } from '@/ui/Skeleton';
+import { ListSkeletonList } from '@/ui/listCardSkeletons';
 import { masterQueries } from '@/data/masterQueries';
 import { useRecommendedDoctors } from '@/hooks/useRecommendedDoctors';
+import { useThemedIcons } from '@/hooks/useThemedIcons';
 import { useAuthStore } from '@/state/authStore';
 import type { Doctor, User } from '@/domain/types';
 import type { RecommendedDoctorMeta } from '@/hooks/useRecommendedDoctors';
@@ -35,6 +36,7 @@ function DoctorRow({
   meta?: RecommendedDoctorMeta | null;
   selected: boolean;
   onToggle: () => void;
+  checkColor: string;
 }) {
   const badgeLabel =
     meta?.reason === 'assigned' ? 'Recommended' : meta ? 'Your territory' : null;
@@ -61,7 +63,7 @@ function DoctorRow({
             </Text>
           ) : null}
         </View>
-        {selected ? <Check size={18} color="#16a34a" /> : null}
+        {selected ? <Check size={18} color={checkColor} /> : null}
       </View>
     </PressableCard>
   );
@@ -76,6 +78,7 @@ export const DoctorPickerSheet: React.FC<DoctorPickerSheetProps> = ({
   coverageUser,
 }) => {
   const authUser = useAuthStore((s) => s.user);
+  const icons = useThemedIcons();
   const repUser = coverageUser ?? authUser;
   const [q, setQ] = React.useState('');
   const [draft, setDraft] = React.useState<Doctor[]>([]);
@@ -148,7 +151,7 @@ export const DoctorPickerSheet: React.FC<DoctorPickerSheetProps> = ({
 
       {searchEnabled ? (
         <>
-          {lookupQ.isLoading ? <SkeletonRow count={2} /> : null}
+          {lookupQ.isLoading ? <ListSkeletonList count={2} variant="avatar" className="px-0 pt-0" /> : null}
           {searchRec.length > 0 ? (
             <View className="mb-3">
               <Label className="mb-2">Suggested</Label>
@@ -159,6 +162,7 @@ export const DoctorPickerSheet: React.FC<DoctorPickerSheetProps> = ({
                   meta={rec.isRecommended(d._id)}
                   selected={draft.some((x) => x._id === d._id)}
                   onToggle={() => toggle(d)}
+                  checkColor={icons.success}
                 />
               ))}
             </View>
@@ -172,6 +176,7 @@ export const DoctorPickerSheet: React.FC<DoctorPickerSheetProps> = ({
                   doctor={d}
                   selected={draft.some((x) => x._id === d._id)}
                   onToggle={() => toggle(d)}
+                  checkColor={icons.success}
                 />
               ))}
             </View>
@@ -184,7 +189,7 @@ export const DoctorPickerSheet: React.FC<DoctorPickerSheetProps> = ({
         </>
       ) : (
         <>
-          {rec.prefetchLoading ? <SkeletonRow count={3} /> : null}
+          {rec.prefetchLoading ? <ListSkeletonList count={3} variant="avatar" className="px-0 pt-0" /> : null}
 
           {rec.prefetchError ? (
             <View className="mb-3">
@@ -207,6 +212,7 @@ export const DoctorPickerSheet: React.FC<DoctorPickerSheetProps> = ({
                   meta={rec.isRecommended(d._id)}
                   selected={draft.some((x) => x._id === d._id)}
                   onToggle={() => toggle(d)}
+                  checkColor={icons.success}
                 />
               ))}
             </View>
@@ -225,6 +231,7 @@ export const DoctorPickerSheet: React.FC<DoctorPickerSheetProps> = ({
                     meta={rec.isRecommended(d._id)}
                     selected={draft.some((x) => x._id === d._id)}
                     onToggle={() => toggle(d)}
+                    checkColor={icons.success}
                   />
                 ))}
               </View>

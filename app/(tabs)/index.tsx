@@ -3,7 +3,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Screen } from '@/ui/Screen';
 import { HomeHero } from '@/features/home/HomeHero';
 import { CheckInCard } from '@/features/attendance/CheckInCard';
-import { OutboxFooter } from '@/features/sync/OutboxFooter';
 import { CompanyGate } from '@/features/onboarding/CompanyGate';
 import { HomeTodayExecution } from '@/features/home/HomeTodayExecution';
 import { HomeNotifications } from '@/features/home/HomeNotifications';
@@ -43,7 +42,6 @@ export default function HomeScreen() {
     <CompanyGate>
       <Screen padded={false} refreshing={refreshing} onRefresh={handleRefresh}>
         <HomeHero />
-        <OutboxFooter />
         {showCheckIn ? <CheckInCard /> : null}
         <HomeTodayExecution />
         <HomeNotifications />

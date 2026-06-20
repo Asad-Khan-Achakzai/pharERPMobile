@@ -7,6 +7,7 @@ import { outbox } from '@/data/outbox';
 import { flushOutbox } from '@/data/syncEngine';
 import { isOfflineApiError } from '@/data/masterSync';
 import { attendanceLocal, type LocalAttendanceRecord } from '@/data/attendanceLocal';
+import { ensureForegroundLocationPermission } from '@/features/tracking/backgroundLocationService';
 import { useAuthStore } from '@/state/authStore';
 import type { Attendance } from '@/domain/types';
 
@@ -20,8 +21,8 @@ export interface AttendanceCapture {
 /** Capture GPS + device timestamp at action time (never fabricated on sync). */
 export async function captureAttendanceLocation(): Promise<AttendanceCapture> {
   try {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
+    const granted = await ensureForegroundLocationPermission();
+    if (!granted) {
       return { capturedAt: new Date().toISOString() };
     }
     const pos = await Location.getCurrentPositionAsync({
@@ -124,7 +125,7 @@ export const attendanceOffline = {
     await attendanceLocal.saveLocal(uid, shadow);
 
     try {
-      const doc = await attendanceApi.checkIn({
+      await attendanceApi.checkIn({
         reason: input.reason,
         notes: input.notes,
         clientUuid,
@@ -133,9 +134,14 @@ export const attendanceOffline = {
         lng: capture.lng,
         accuracy: capture.accuracy,
       });
-      await attendanceLocal.cacheMeToday(uid, doc);
-      await attendanceLocal.clearLocal(uid, doc.businessDate ?? shadow.businessDate);
-      return { ...doc, _syncState: 'synced' };
+      const fresh = await attendanceApi.meToday();
+      if (fresh) {
+        await attendanceLocal.cacheMeToday(uid, fresh);
+        await attendanceLocal.clearLocal(uid, fresh.businessDate ?? shadow.businessDate);
+        return { ...fresh, _syncState: 'synced' };
+      }
+      await attendanceLocal.clearLocal(uid, shadow.businessDate);
+      return shadow;
     } catch (err) {
       const status = err instanceof ApiError ? err.status : 0;
       if (status === 400 || status === 403 || status === 409 || status === 422) {
@@ -167,7 +173,7 @@ export const attendanceOffline = {
     await attendanceLocal.saveLocal(uid, shadow);
 
     try {
-      const doc = await attendanceApi.checkOut({
+      await attendanceApi.checkOut({
         clientUuid,
         notes: input.notes,
         capturedAt: capture.capturedAt,
@@ -175,9 +181,14 @@ export const attendanceOffline = {
         lng: capture.lng,
         accuracy: capture.accuracy,
       });
-      await attendanceLocal.cacheMeToday(uid, doc as Attendance);
-      await attendanceLocal.clearLocal(uid, doc.businessDate ?? shadow.businessDate);
-      return { ...(doc as Attendance), _syncState: 'synced' };
+      const fresh = await attendanceApi.meToday();
+      if (fresh) {
+        await attendanceLocal.cacheMeToday(uid, fresh);
+        await attendanceLocal.clearLocal(uid, fresh.businessDate ?? shadow.businessDate);
+        return { ...fresh, _syncState: 'synced' };
+      }
+      await attendanceLocal.clearLocal(uid, shadow.businessDate);
+      return shadow;
     } catch (err) {
       const status = err instanceof ApiError ? err.status : 0;
       if (status === 400 || status === 403 || status === 409 || status === 422) {

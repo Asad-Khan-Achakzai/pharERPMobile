@@ -10,8 +10,8 @@ import { PressableCard } from '@/ui/Card';
 import { Text } from '@/ui/Text';
 import { Badge } from '@/ui/Badge';
 import { FAB } from '@/ui/FAB';
-import { SkeletonRow } from '@/ui/Skeleton';
-import { EmptyState } from '@/ui/EmptyState';
+import { ListSkeletonList } from '@/ui/listCardSkeletons';
+import { EmptyState, ThemedEmptyIcon } from '@/ui/EmptyState';
 import { masterQueries } from '@/data/masterQueries';
 import { SyncStatusBadge } from '@/ui/SyncStatusBadge';
 import type { SyncUiState } from '@/data/localEntities';
@@ -81,12 +81,10 @@ export default function VisitsScreen() {
         ]}
       />
       {today.isLoading ? (
-        <View className="px-4 pt-2">
-          <SkeletonRow count={5} />
-        </View>
+        <ListSkeletonList count={5} variant="visit" />
       ) : items.length === 0 ? (
         <EmptyState
-          icon={<Calendar size={28} color="#94a3b8" />}
+          icon={<ThemedEmptyIcon Icon={Calendar} />}
           title="Nothing here yet"
           description={
             tab === 'pending'

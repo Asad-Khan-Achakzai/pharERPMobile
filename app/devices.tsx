@@ -9,12 +9,14 @@ import { Card } from '@/ui/Card';
 import { Text, Subtitle } from '@/ui/Text';
 import { Button } from '@/ui/Button';
 import { Badge } from '@/ui/Badge';
-import { SkeletonRow } from '@/ui/Skeleton';
+import { ListSkeletonList } from '@/ui/listCardSkeletons';
 import { useToast } from '@/ui/Toast';
 import { authApi } from '@/api/auth';
+import { useThemedIcons } from '@/hooks/useThemedIcons';
 
 export default function Devices() {
   const toast = useToast();
+  const icons = useThemedIcons();
   const qc = useQueryClient();
   const list = useQuery({
     queryKey: ['auth', 'sessions'],
@@ -34,9 +36,7 @@ export default function Devices() {
     <Screen padded={false} scroll={false}>
       <Header back title="Devices" subtitle="Active mobile sessions" />
       {list.isLoading ? (
-        <View className="px-4">
-          <SkeletonRow count={3} />
-        </View>
+        <ListSkeletonList count={3} variant="device" />
       ) : (
         <FlatList
           data={list.data ?? []}
@@ -47,7 +47,7 @@ export default function Devices() {
             <Card>
               <View className="flex-row items-center">
                 <View className="h-10 w-10 rounded-lg bg-slate-100 items-center justify-center mr-3">
-                  <Smartphone size={20} color="#0f172a" />
+                  <Smartphone size={20} color={icons.foreground} />
                 </View>
                 <View className="flex-1">
                   <Text size="base" weight="semibold" numberOfLines={1}>

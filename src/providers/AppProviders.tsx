@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { queryClient } from '@/data/queryClient';
@@ -12,23 +12,11 @@ import { startSyncEngine } from '@/data/syncEngine';
 import { MasterDataSyncBridge } from '@/hooks/useMasterDataSync';
 import { useAuthStore } from '@/state/authStore';
 import { useLiveTracking } from '@/hooks/useLiveTracking';
+import { PushRegistrationBridge } from '@/features/push/PushRegistrationBridge';
+import { NotificationTapBridge } from '@/features/push/NotificationTapBridge';
 
 function LiveTrackingBridge() {
   useLiveTracking();
-  return null;
-}
-
-function PushRegistrationBridge() {
-  const serverConfig = useAuthStore((s) => s.serverConfig);
-  const accessToken = useAuthStore((s) => s.accessToken);
-
-  React.useEffect(() => {
-    if (!accessToken || !serverConfig?.push?.enabled) return;
-    void import('@/features/push/registerPush').then(({ registerPushNotifications }) =>
-      registerPushNotifications(),
-    );
-  }, [accessToken, serverConfig?.push?.enabled]);
-
   return null;
 }
 
@@ -47,13 +35,14 @@ export const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
+      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
         <ThemeProvider>
           <ThemedAppShell>
             <QueryClientProvider client={queryClient}>
               <BottomSheetModalProvider>
                 <ToastProvider>
                   <PushRegistrationBridge />
+                  <NotificationTapBridge />
                   <LiveTrackingBridge />
                   <MasterDataSyncBridge />
                   {children}

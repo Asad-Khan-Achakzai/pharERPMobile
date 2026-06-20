@@ -15,10 +15,12 @@ import {
 } from 'lucide-react-native';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useTabBarLayout } from '@/navigation/useTabBarLayout';
 
 export default function RepTabsLayout() {
   const { canSee } = usePermissions();
   const { colors } = useTheme();
+  const { bottomInset, totalHeight } = useTabBarLayout();
 
   const home = canSee('rep_home');
   const visits = canSee('rep_visits');
@@ -34,9 +36,9 @@ export default function RepTabsLayout() {
         tabBarStyle: {
           backgroundColor: colors.card,
           borderTopColor: colors.border,
-          height: 64,
+          height: totalHeight,
           paddingTop: 6,
-          paddingBottom: 8,
+          paddingBottom: bottomInset,
         },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '500' },
       }}

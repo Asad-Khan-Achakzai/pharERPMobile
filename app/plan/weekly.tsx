@@ -12,9 +12,10 @@ import { PressableCard } from '@/ui/Card';
 import { Text, Subtitle } from '@/ui/Text';
 import { Badge } from '@/ui/Badge';
 import { Button } from '@/ui/Button';
-import { SkeletonRow } from '@/ui/Skeleton';
-import { EmptyState } from '@/ui/EmptyState';
+import { ListSkeletonList } from '@/ui/listCardSkeletons';
+import { EmptyState, ThemedEmptyIcon } from '@/ui/EmptyState';
 import { FAB } from '@/ui/FAB';
+import { useTabBarLayout } from '@/navigation/useTabBarLayout';
 import { masterQueries } from '@/data/masterQueries';
 import { weeklyPlansApi } from '@/api/weeklyPlans';
 import { ApiError } from '@/api/client';
@@ -94,6 +95,8 @@ function WeeklyPlanImpl() {
     'team.viewAllReports',
     'admin.access',
   ]);
+  const isAdmin = hasAnyPermission(user, ['admin.access']);
+  const { stackFabOffset } = useTabBarLayout();
 
   const [createOpen, setCreateOpen] = React.useState(false);
   const [teamView, setTeamView] = React.useState(false);
@@ -146,7 +149,7 @@ function WeeklyPlanImpl() {
         subtitle="Schedule your field week"
       />
 
-      {canSeeTeam ? (
+      {canSeeTeam && !isAdmin ? (
         <View className="px-4 pt-2 flex-row">
           <Button
             size="sm"
@@ -189,12 +192,10 @@ function WeeklyPlanImpl() {
       ) : null}
 
       {list.isLoading ? (
-        <View className="px-4 pt-2">
-          <SkeletonRow count={4} />
-        </View>
+        <ListSkeletonList count={4} variant="weeklyPlan" />
       ) : sections.length === 0 ? (
         <EmptyState
-          icon={<CalendarRange size={28} color="#94a3b8" />}
+          icon={<ThemedEmptyIcon Icon={CalendarRange} />}
           title="No weekly plans yet"
           description="Start planning this week in a few taps."
           actionLabel={canCreate ? 'Create weekly plan' : undefined}
@@ -224,6 +225,7 @@ function WeeklyPlanImpl() {
           onPress={() => setCreateOpen(true)}
           icon={<Plus size={22} color="#fff" />}
           accessibilityLabel="Create weekly plan"
+          bottomOffset={stackFabOffset}
         />
       ) : null}
 

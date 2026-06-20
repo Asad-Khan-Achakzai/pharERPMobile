@@ -19,13 +19,12 @@ import { useRouter } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
-import { Screen } from '@/ui/Screen';
+import { FormScreen } from '@/ui/FormScreen';
 import { Header } from '@/ui/Header';
 import { Card } from '@/ui/Card';
 import { TextField } from '@/ui/TextField';
 import { Button } from '@/ui/Button';
 import { Text, Label } from '@/ui/Text';
-import { StickyActionBar } from '@/ui/StickyActionBar';
 import { Tabs } from '@/ui/Tabs';
 import { AttachReceiptButton } from '@/ui/media/AttachReceiptButton';
 import { useToast } from '@/ui/Toast';
@@ -119,8 +118,19 @@ function NewExpenseImpl() {
   const valid = Number(amount) >= 0.01 && !!category && /^\d{4}-\d{2}-\d{2}$/.test(date);
 
   return (
-    <Screen padded={false} keyboardAvoid>
-      <Header back title="New expense" />
+    <FormScreen
+      header={<Header back title="New expense" />}
+      footer={
+        <Button
+          onPress={() => submit.mutate()}
+          loading={submit.isPending}
+          disabled={!valid}
+          fullWidth
+        >
+          Submit expense
+        </Button>
+      }
+    >
       <Card className="mx-4 mt-2">
         <Label className="mb-2">Category</Label>
         <Tabs
@@ -158,17 +168,7 @@ function NewExpenseImpl() {
           </Text>
         </View>
       </Card>
-      <StickyActionBar>
-        <Button
-          onPress={() => submit.mutate()}
-          loading={submit.isPending}
-          disabled={!valid}
-          fullWidth
-        >
-          Submit expense
-        </Button>
-      </StickyActionBar>
-    </Screen>
+    </FormScreen>
   );
 }
 

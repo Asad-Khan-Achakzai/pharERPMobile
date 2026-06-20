@@ -373,6 +373,31 @@ export interface Attendance {
   shiftCheckInClosed?: boolean;
   shiftCheckInClosedMessage?: string;
   policySummary?: Record<string, unknown> | null;
+  governance?: {
+    attendanceGovernanceEnabled?: boolean;
+    attendancePoliciesEnabled?: boolean;
+    attendanceApprovalsEnabled?: boolean;
+    strictLateBlocking?: boolean;
+    allowCheckInWhenLate?: boolean;
+    autoRequestOnLateCheckIn?: boolean;
+    attendanceSystemMode?: AttendanceSystemMode;
+  };
+  /** V2 check-in zone metadata (informational only; server-authoritative). */
+  attendanceLocationStatus?: AttendanceLocationStatus;
+  distanceFromCheckInPoint?: number | null;
+  requiredCheckInLocation?: {
+    name: string;
+    latitude?: number;
+    longitude?: number;
+  };
+  resolvedCheckInPolicy?: {
+    type: string;
+    locationName: string;
+    latitude: number;
+    longitude: number;
+    radiusMeters: number;
+  };
+  checkInPolicyV2?: CheckInPolicyPreview;
   /** Client-only conveniences (not persisted yet on the Attendance model). */
   lat?: number;
   lng?: number;
@@ -390,6 +415,39 @@ export interface Attendance {
   _syncState?: 'synced' | 'pending' | 'failed';
 }
 
+export type CheckInPolicyType =
+  | 'COMPANY_DEFAULT'
+  | 'FIRST_PLANNED_VISIT'
+  | 'SPECIFIC_DOCTOR'
+  | 'CUSTOM_LOCATION';
+
+export type AttendanceLocationStatus = 'WITHIN_ZONE' | 'OUT_OF_ZONE';
+
+export type AttendanceSystemMode = 'LEGACY' | 'CHECKIN_POLICY_V2';
+
+export interface CheckInConfiguration {
+  policyType: CheckInPolicyType;
+  doctorId?: ID | null;
+  customLocation?: {
+    locationName: string;
+    latitude: number;
+    longitude: number;
+    radiusMeters: number;
+  };
+}
+
+export interface CheckInPolicyPreview {
+  enabled: boolean;
+  policyType?: CheckInPolicyType | null;
+  source?: string | null;
+  requiredCheckInLocation?: {
+    name: string;
+    latitude: number;
+    longitude: number;
+    radiusMeters?: number;
+  } | null;
+}
+
 export interface WeeklyPlan {
   _id: ID;
   companyId?: ID;
@@ -404,6 +462,7 @@ export interface WeeklyPlan {
   approvedBy?: ID | null;
   approvedAt?: ISO | null;
   rejectedReason?: string | null;
+  checkInConfiguration?: CheckInConfiguration | null;
   totalPlanItems?: number;
   plannedDoctorCount?: number;
   planItemsCount?: number;
@@ -413,6 +472,7 @@ export interface WeeklyPlan {
 export interface WeeklyPlanDetail extends WeeklyPlan {
   planItems?: PlanItem[];
   executionMetrics?: Record<string, unknown>;
+  attendanceSystemMode?: AttendanceSystemMode;
   editLock?: {
     beforePlanWeek?: boolean;
     businessTodayYmd?: string;
@@ -517,6 +577,8 @@ export type PaymentMethod = 'CASH' | 'CHEQUE' | 'BANK_TRANSFER' | 'UPI';
 
 export type CollectorType = 'COMPANY' | 'DISTRIBUTOR';
 
+export type SettlementDirection = 'DISTRIBUTOR_TO_COMPANY' | 'COMPANY_TO_DISTRIBUTOR';
+
 export interface Collection {
   _id: ID;
   companyId?: ID;
@@ -529,6 +591,18 @@ export interface Collection {
   collectedBy?: ID;
   date?: ISO;
   notes?: string;
+  createdAt?: ISO;
+}
+
+export interface Settlement {
+  _id: ID;
+  distributorId: ID | Pick<Distributor, '_id' | 'name'>;
+  direction: SettlementDirection;
+  amount: number;
+  paymentMethod: PaymentMethod;
+  referenceNumber?: string;
+  notes?: string;
+  date?: ISO;
   createdAt?: ISO;
 }
 
@@ -568,6 +642,9 @@ export interface ServerConfig {
     geofenceEnabled: boolean;
     selfieEnabled: boolean;
     geofenceRadiusMeters?: number;
+    systemMode?: AttendanceSystemMode;
+    configVersion?: number;
+    configUpdatedAt?: string | null;
   };
   doctors: {
     approvalRequired: boolean;
@@ -578,6 +655,8 @@ export interface ServerConfig {
   };
   push?: {
     enabled: boolean;
+    /** True when backend has EXPO_ACCESS_TOKEN configured */
+    backendReady?: boolean;
   };
   liveTracking?: {
     enabled: boolean;
@@ -606,14 +685,22 @@ export interface DeliveryRecord {
   status?: string;
 }
 
+export type LiveAttendanceStatus = 'NOT_CHECKED_IN' | 'CHECKED_IN' | 'CHECKED_OUT' | 'LATE_CHECKIN_PENDING';
+
+export type LiveLocationSource = 'heartbeat' | 'checkin' | null;
+
 export interface LiveRepLocation {
   userId: ID;
   name: string;
+  attendanceStatus: LiveAttendanceStatus;
+  checkInTime: ISO | null;
+  checkOutTime: ISO | null;
   lat: number | null;
   lng: number | null;
   accuracy?: number | null;
   capturedAt: ISO | null;
   ageSeconds: number | null;
+  locationSource?: LiveLocationSource;
 }
 
 export interface DeviceSession {

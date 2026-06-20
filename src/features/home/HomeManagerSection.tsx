@@ -5,13 +5,17 @@ import { AlertTriangle, ChevronRight, ClipboardList, Users } from 'lucide-react-
 import { Card } from '@/ui/Card';
 import { Text, H3 } from '@/ui/Text';
 import { Button } from '@/ui/Button';
-import { SkeletonRow } from '@/ui/Skeleton';
+import {
+  HomeApprovalsCardSkeleton,
+  HomeTeamTodayCardSkeleton,
+} from '@/features/home/homeCardSkeletons';
 import { dashboardApi } from '@/api/dashboard';
 import { attendanceRequestsApi } from '@/api/attendanceRequests';
 import { weeklyPlansApi } from '@/api/weeklyPlans';
 import { expensesApi } from '@/api/expenses';
 import { attendanceApi } from '@/api/attendance';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useThemedIcons } from '@/hooks/useThemedIcons';
 import { usePushWithReturn } from '@/navigation/usePushWithReturn';
 
 /** Manager-only block — never shown without explicit manager permissions. */
@@ -44,6 +48,7 @@ const TEAM_ATTENDANCE_PERMISSIONS = [
 export const HomeManagerSection: React.FC = () => {
   const pushWithReturn = usePushWithReturn();
   const { canAny, can } = usePermissions();
+  const icons = useThemedIcons();
 
   const showSection = canAny([...MANAGER_HOME_PERMISSIONS]);
   const showApprovals = canAny(APPROVAL_PERMISSIONS);
@@ -96,6 +101,22 @@ export const HomeManagerSection: React.FC = () => {
 
   if (!showSection) return null;
 
+  const showPlanApprovals = can('weeklyPlans.review') || can('weeklyPlans.approve');
+  const showAttendanceApprovals = canAny([
+    'attendance.approve',
+    'attendance.approve.direct',
+    'attendance.approve.escalated',
+    'attendance.governance.view',
+    'admin.access',
+  ]);
+  const showExpenseApprovals = canAny(['expenses.approve', 'admin.access']);
+
+  const approvalsLoading =
+    showApprovals &&
+    ((showPlanApprovals && planApprovals.isLoading) ||
+      (showAttendanceApprovals && attendanceApprovals.isLoading) ||
+      (showExpenseApprovals && expenseApprovals.isLoading));
+
   const planCount = planApprovals.data?.length ?? 0;
   const attendanceCount = attendanceApprovals.data?.length ?? 0;
   const expenseCount = expenseApprovals.data?.length ?? 0;
@@ -108,12 +129,6 @@ export const HomeManagerSection: React.FC = () => {
   const present = attSummary?.presentPayroll ?? attSummary?.present ?? 0;
   const notMarked = attSummary?.notMarked ?? 0;
   const absent = attSummary?.absent ?? 0;
-
-  const loading =
-    (showTeamVisits && teamSummary.isLoading) ||
-    (showTeamAttendance && teamAttendance.isLoading) ||
-    (showApprovals &&
-      (planApprovals.isLoading || attendanceApprovals.isLoading || expenseApprovals.isLoading));
 
   const approvalSummaryParts = [
     planCount > 0 ? `${planCount} weekly plan${planCount === 1 ? '' : 's'}` : null,
@@ -131,24 +146,20 @@ export const HomeManagerSection: React.FC = () => {
         </Text>
       </View>
 
-      {loading ? (
-        <View className="px-4">
-          <SkeletonRow count={2} />
-        </View>
-      ) : null}
-
-      {showApprovals && pendingApprovalTotal > 0 ? (
+      {showApprovals && approvalsLoading ? (
+        <HomeApprovalsCardSkeleton />
+      ) : showApprovals && pendingApprovalTotal > 0 ? (
         <Card className="mx-4 mt-2">
           <View className="flex-row items-center justify-between mb-2">
             <View className="flex-row items-center">
-              <ClipboardList size={18} color="#0f172a" />
+              <ClipboardList size={18} color={icons.foreground} />
               <H3 className="ml-2">Pending approvals</H3>
             </View>
             <Button
               variant="ghost"
               size="sm"
               onPress={() => pushWithReturn('/(manager)/approvals')}
-              rightIcon={<ChevronRight size={16} color="#2563eb" />}
+              rightIcon={<ChevronRight size={16} color={icons.primary} />}
             >
               <Text tone="primary" size="sm" weight="medium">
                 Review
@@ -167,18 +178,20 @@ export const HomeManagerSection: React.FC = () => {
         </Card>
       ) : null}
 
-      {showTeamAttendance && teamAttendance.data ? (
+      {showTeamAttendance && teamAttendance.isLoading ? (
+        <HomeTeamTodayCardSkeleton />
+      ) : showTeamAttendance && teamAttendance.data ? (
         <Card className="mx-4 mt-3">
           <View className="flex-row items-center justify-between mb-2">
             <View className="flex-row items-center">
-              <Users size={18} color="#0f172a" />
+              <Users size={18} color={icons.foreground} />
               <H3 className="ml-2">Team today</H3>
             </View>
             <Button
               variant="ghost"
               size="sm"
               onPress={() => pushWithReturn('/(manager)/attendance')}
-              rightIcon={<ChevronRight size={16} color="#2563eb" />}
+              rightIcon={<ChevronRight size={16} color={icons.primary} />}
             >
               <Text tone="primary" size="sm" weight="medium">
                 Details
@@ -211,7 +224,7 @@ export const HomeManagerSection: React.FC = () => {
         </Card>
       ) : null}
 
-      {showTeamVisits && missedTeamVisits > 0 ? (
+      {showTeamVisits && !teamSummary.isLoading && missedTeamVisits > 0 ? (
         <Card className="mx-4 mt-3 border-warning/30 bg-warning/5">
           <View className="flex-row items-start">
             <AlertTriangle size={18} color="#f59e0b" />

@@ -8,9 +8,10 @@ import { Header } from '@/ui/Header';
 import { PressableCard } from '@/ui/Card';
 import { Text, Subtitle } from '@/ui/Text';
 import { Badge } from '@/ui/Badge';
-import { SkeletonRow } from '@/ui/Skeleton';
-import { EmptyState } from '@/ui/EmptyState';
+import { ListSkeletonList } from '@/ui/listCardSkeletons';
+import { EmptyState, ThemedEmptyIcon } from '@/ui/EmptyState';
 import { notificationsApi } from '@/api/notifications';
+import { openNotificationTarget } from '@/features/notifications/notificationNavigation';
 
 export default function Notifications() {
   const qc = useQueryClient();
@@ -23,12 +24,10 @@ export default function Notifications() {
     <Screen padded={false} scroll={false}>
       <Header back title="Notifications" />
       {list.isLoading ? (
-        <View className="px-4">
-          <SkeletonRow count={5} />
-        </View>
+        <ListSkeletonList count={5} variant="notification" />
       ) : (list.data ?? []).length === 0 ? (
         <EmptyState
-          icon={<Bell size={28} color="#94a3b8" />}
+          icon={<ThemedEmptyIcon Icon={Bell} />}
           title="You're all caught up"
           description="Reminders and announcements will appear here."
         />
@@ -41,8 +40,12 @@ export default function Notifications() {
           renderItem={({ item }) => (
             <PressableCard
               onPress={async () => {
-                if (!item.read) {
-                  await notificationsApi.markRead(item._id);
+                const opened = await openNotificationTarget({
+                  link: item.link,
+                  kind: item.kind,
+                  notificationId: item._id,
+                });
+                if (opened) {
                   qc.invalidateQueries({ queryKey: ['notifications', 'feed'] });
                 }
               }}

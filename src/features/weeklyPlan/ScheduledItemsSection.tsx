@@ -12,6 +12,7 @@ import { Divider } from '@/ui/ListRow';
 import { useToast } from '@/ui/Toast';
 import { planItemsApi } from '@/api/planItems';
 import { ApiError } from '@/api/client';
+import { useThemedIcons } from '@/hooks/useThemedIcons';
 import type { ID, PlanItem, WeeklyPlanDetail } from '@/domain/types';
 
 function safeFormat(iso: string | null | undefined, pattern: string): string {
@@ -76,6 +77,7 @@ export const ScheduledItemsSection: React.FC<Props> = ({ plan, planId, canEdit }
   const pushWithReturn = usePushWithReturn();
   const toast = useToast();
   const qc = useQueryClient();
+  const icons = useThemedIcons();
   const beforeWeek = plan.editLock?.beforePlanWeek !== false;
   const businessToday = plan.editLock?.businessTodayYmd;
   const isDraft = plan.status === 'DRAFT';
@@ -152,7 +154,7 @@ export const ScheduledItemsSection: React.FC<Props> = ({ plan, planId, canEdit }
                             onPress={() => moveItem(date, items, idx, -1)}
                             accessibilityLabel="Move up"
                           >
-                            <ChevronUp size={16} color="#64748b" />
+                            <ChevronUp size={16} color={icons.muted} />
                           </Button>
                           <Button
                             size="sm"
@@ -161,7 +163,7 @@ export const ScheduledItemsSection: React.FC<Props> = ({ plan, planId, canEdit }
                             onPress={() => moveItem(date, items, idx, 1)}
                             accessibilityLabel="Move down"
                           >
-                            <ChevronDown size={16} color="#64748b" />
+                            <ChevronDown size={16} color={icons.muted} />
                           </Button>
                         </View>
                       ) : null}

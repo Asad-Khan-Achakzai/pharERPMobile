@@ -20,6 +20,7 @@ import {
   Target,
   Users as UsersIcon,
   Wallet,
+  type LucideIcon,
 } from 'lucide-react-native';
 import { Screen } from '@/ui/Screen';
 import { Header } from '@/ui/Header';
@@ -29,16 +30,16 @@ import { Text, H2 } from '@/ui/Text';
 import { Avatar } from '@/ui/Avatar';
 import { Button } from '@/ui/Button';
 import { useAuthStore } from '@/state/authStore';
+import { useTheme } from '@/theme/ThemeProvider';
 import { authApi } from '@/api/auth';
 import { usePushWithReturn } from '@/navigation/usePushWithReturn';
-import { OutboxFooter } from '@/features/sync/OutboxFooter';
 import { hasAnyPermission } from '@/auth/rbac';
 import type { User } from '@/domain/types';
 
 interface MoreEntry {
   key: string;
   title: string;
-  icon: React.ReactNode;
+  Icon: LucideIcon;
   route: string;
   /** Permission(s) gating the row; `undefined` means always visible. */
   permissionAny?: string[];
@@ -48,35 +49,40 @@ const ENTRIES_PRIMARY: MoreEntry[] = [
   {
     key: 'weekly',
     title: 'Weekly plans',
-    icon: <Briefcase size={18} color="#0f172a" />,
+    Icon: Briefcase,
     route: '/plan/weekly',
     permissionAny: ['weeklyPlans.view', 'weeklyPlans.review', 'weeklyPlans.approve'],
   },
   {
     key: 'kpi',
     title: 'Targets & KPI',
-    icon: <Target size={18} color="#0f172a" />,
+    Icon: Target,
     route: '/kpi',
-    permissionAny: ['targets.view', 'team.viewAllReports'],
+    permissionAny: [
+      'targets.view',
+      'team.viewAllReports',
+      'weeklyPlans.view',
+      'weeklyPlans.markVisit',
+    ],
   },
   {
     key: 'expenses',
     title: 'Expenses',
-    icon: <Receipt size={18} color="#0f172a" />,
+    Icon: Receipt,
     route: '/expenses',
     permissionAny: ['expenses.view'],
   },
   {
     key: 'collections',
     title: 'Pharmacies & collections',
-    icon: <Wallet size={18} color="#0f172a" />,
-    route: '/pharmacy',
+    Icon: Wallet,
+    route: '/payments',
     permissionAny: ['payments.view', 'pharmacies.view'],
   },
   {
     key: 'team',
     title: 'My team',
-    icon: <UsersIcon size={18} color="#0f172a" />,
+    Icon: UsersIcon,
     route: '/(manager)',
     permissionAny: ['team.view', 'team.viewAllReports'],
   },
@@ -86,25 +92,25 @@ const ENTRIES_UTILS: MoreEntry[] = [
   {
     key: 'notifications',
     title: 'Notifications',
-    icon: <BellRing size={18} color="#0f172a" />,
+    Icon: BellRing,
     route: '/notifications',
   },
   {
     key: 'outbox',
     title: 'Outbox & sync',
-    icon: <CloudUpload size={18} color="#0f172a" />,
+    Icon: CloudUpload,
     route: '/outbox',
   },
   {
     key: 'devices',
     title: 'Devices',
-    icon: <Smartphone size={18} color="#0f172a" />,
+    Icon: Smartphone,
     route: '/devices',
   },
   {
     key: 'change-password',
     title: 'Change password',
-    icon: <KeyRound size={18} color="#0f172a" />,
+    Icon: KeyRound,
     route: '/change-password',
   },
 ];
@@ -120,6 +126,7 @@ export default function ManagerMore() {
   const router = useRouter();
   const pushWithReturn = usePushWithReturn();
   const { user, company, signOut } = useAuthStore();
+  const { colors } = useTheme();
 
   const primary = React.useMemo(
     () => filterEntries(user, ENTRIES_PRIMARY),
@@ -160,15 +167,13 @@ export default function ManagerMore() {
         </View>
       </Card>
 
-      <OutboxFooter />
-
       {primary.length > 0 ? (
         <Card className="mx-4 mt-2" padded={false}>
           <View className="px-3">
             {primary.map((e, i) => (
               <React.Fragment key={e.key}>
                 <ListRow
-                  left={e.icon}
+                  left={<e.Icon size={18} color={colors.foreground} />}
                   title={e.title}
                   chevron
                   onPress={() => pushWithReturn(e.route)}
@@ -185,7 +190,7 @@ export default function ManagerMore() {
           {utils.map((e, i) => (
             <React.Fragment key={e.key}>
               <ListRow
-                left={e.icon}
+                left={<e.Icon size={18} color={colors.foreground} />}
                 title={e.title}
                 chevron
                 onPress={() => pushWithReturn(e.route)}
@@ -200,7 +205,7 @@ export default function ManagerMore() {
         <Button
           variant="outline"
           onPress={onLogout}
-          leftIcon={<LogOut size={18} color="#0f172a" />}
+          leftIcon={<LogOut size={18} color={colors.foreground} />}
         >
           Sign out
         </Button>

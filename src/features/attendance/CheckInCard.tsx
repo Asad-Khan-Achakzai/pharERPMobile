@@ -9,10 +9,21 @@ import { Text } from '@/ui/Text';
 import { Badge } from '@/ui/Badge';
 import { SyncStatusBadge } from '@/ui/SyncStatusBadge';
 import { TextField } from '@/ui/TextField';
+import { CheckInCardSkeleton } from '@/features/home/homeCardSkeletons';
 import { useToast } from '@/ui/Toast';
 import { SelfieCaptureButton } from '@/ui/media/SelfieCaptureButton';
 import { attendanceOffline } from '@/data/attendanceOffline';
+import { subscribeAttendanceRefresh } from '@/data/syncEngine';
 import { useFlags } from '@/hooks/useFlags';
+import { formatLateDuration } from '@/utils/formatDuration';
+import { formatDistanceMeters } from '@/utils/formatDistance';
+import { resolveAttendanceUiStatus } from '@/utils/attendanceStatus';
+import { LiveTrackingConsentSheet } from '@/features/tracking/LiveTrackingConsentSheet';
+import { hasAcceptedLiveTrackingConsent } from '@/features/tracking/liveTrackingConsent';
+import {
+  ensureForegroundLocationPermission,
+  isBackgroundLiveTrackingRunning,
+} from '@/features/tracking/backgroundLocationService';
 
 export const CheckInCard: React.FC = () => {
   const toast = useToast();
@@ -20,11 +31,19 @@ export const CheckInCard: React.FC = () => {
   const flags = useFlags();
   const [reason, setReason] = React.useState('');
   const [notes, setNotes] = React.useState('');
+  const [consentOpen, setConsentOpen] = React.useState(false);
+  const [trackingActive, setTrackingActive] = React.useState(false);
 
   const todayQ = useQuery({
     queryKey: ['attendance', 'today'],
     queryFn: () => attendanceOffline.meToday(),
   });
+
+  React.useEffect(() => {
+    return subscribeAttendanceRefresh(() => {
+      void qc.invalidateQueries({ queryKey: ['attendance', 'today'] });
+    });
+  }, [qc]);
 
   const checkIn = useMutation({
     mutationFn: () =>
@@ -34,9 +53,21 @@ export const CheckInCard: React.FC = () => {
       }),
     onSuccess: (doc) => {
       const pending = doc._localPending;
+      const zoneMsg =
+        !doc._localPending && doc.attendanceLocationStatus === 'OUT_OF_ZONE'
+          ? ' — recorded outside check-in zone'
+          : !doc._localPending && doc.attendanceLocationStatus === 'WITHIN_ZONE'
+            ? ' — within check-in zone'
+            : '';
       toast.show({
-        tone: pending ? 'info' : 'success',
-        message: pending ? 'Check-in saved offline — will sync automatically' : 'Checked in',
+        tone: pending
+          ? 'info'
+          : doc.attendanceLocationStatus === 'OUT_OF_ZONE'
+            ? 'warning'
+            : 'success',
+        message: pending
+          ? 'Check-in saved offline — zone status updates after sync'
+          : `Checked in${zoneMsg}`,
       });
       qc.setQueryData(['attendance', 'today'], doc);
       qc.invalidateQueries({ queryKey: ['dashboard', 'home'] });
@@ -79,6 +110,7 @@ export const CheckInCard: React.FC = () => {
   });
 
   const today = todayQ.data;
+  const uiStatus = resolveAttendanceUiStatus(today);
   React.useEffect(() => {
     if (today?.notes != null) setNotes(today.notes);
   }, [today?.notes]);
@@ -88,11 +120,53 @@ export const CheckInCard: React.FC = () => {
   const canCheckOut = today?.canCheckOut ?? (hasCheckIn && !hasCheckOut);
   const isPendingSync = today?._localPending || today?._syncState === 'pending';
 
+  React.useEffect(() => {
+    if (!flags.liveTrackingEnabled || !hasCheckIn || hasCheckOut) {
+      setTrackingActive(false);
+      return;
+    }
+    void isBackgroundLiveTrackingRunning().then(setTrackingActive);
+    const id = setInterval(() => {
+      void isBackgroundLiveTrackingRunning().then(setTrackingActive);
+    }, 30_000);
+    return () => clearInterval(id);
+  }, [flags.liveTrackingEnabled, hasCheckIn, hasCheckOut]);
+
+  const runCheckIn = React.useCallback(() => {
+    checkIn.mutate();
+  }, [checkIn]);
+
+  const handleCheckInPress = React.useCallback(async () => {
+    try {
+      if (!flags.liveTrackingEnabled) {
+        runCheckIn();
+        return;
+      }
+      const accepted = await hasAcceptedLiveTrackingConsent();
+      if (!accepted) {
+        setConsentOpen(true);
+        return;
+      }
+      const foregroundGranted = await ensureForegroundLocationPermission();
+      if (!foregroundGranted) {
+        toast.show({
+          tone: 'info',
+          message:
+            'Location access was not granted. Check-in will continue without GPS — enable location in Settings for zone tracking.',
+        });
+      }
+      runCheckIn();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Could not start check-in';
+      toast.show({ tone: 'danger', message: msg });
+    }
+  }, [flags.liveTrackingEnabled, runCheckIn, toast]);
+
   const headline = (() => {
     if (isPendingSync && !hasCheckOut) return 'Pending sync';
-    if (today?.uiStatus === 'SHIFT_CHECKIN_CLOSED') return 'Shift closed';
-    if (today?.uiStatus === 'LATE_CHECKIN_REJECTED') return 'Late check-in rejected';
-    if (today?.uiStatus === 'LATE_CHECKIN_PENDING') return 'Late check-in pending approval';
+    if (uiStatus === 'SHIFT_CHECKIN_CLOSED') return 'Shift closed';
+    if (uiStatus === 'LATE_CHECKIN_REJECTED') return 'Late check-in rejected';
+    if (uiStatus === 'LATE_CHECKIN_PENDING') return 'Late check-in pending approval';
     if (hasCheckOut) return 'Day complete';
     if (hasCheckIn) return 'Checked in';
     return 'Start your day';
@@ -100,16 +174,23 @@ export const CheckInCard: React.FC = () => {
 
   const statusBadge = (() => {
     if (isPendingSync) return null;
-    if (today?.uiStatus === 'LATE_CHECKIN_PENDING') return { tone: 'warning' as const, label: 'PENDING' };
-    if (today?.uiStatus === 'LATE_CHECKIN_REJECTED') return { tone: 'danger' as const, label: 'REJECTED' };
-    if (today?.uiStatus === 'SHIFT_CHECKIN_CLOSED') return { tone: 'muted' as const, label: 'CLOSED' };
-    if (today?.lateMinutes && today.lateMinutes > 0)
-      return { tone: 'warning' as const, label: `LATE ${today.lateMinutes}m` };
+    if (uiStatus === 'LATE_CHECKIN_PENDING') return { tone: 'warning' as const, label: 'PENDING' };
+    if (uiStatus === 'LATE_CHECKIN_REJECTED') return { tone: 'danger' as const, label: 'REJECTED' };
+    if (uiStatus === 'SHIFT_CHECKIN_CLOSED') return { tone: 'muted' as const, label: 'CLOSED' };
+    if (today?.lateMinutes && today.lateMinutes > 0) {
+      const lateLabel = formatLateDuration(today.lateMinutes);
+      return { tone: 'warning' as const, label: lateLabel ? `Late · ${lateLabel}` : 'Late' };
+    }
     if (today?.status) return { tone: 'success' as const, label: today.status };
     return null;
   })();
 
+  if (todayQ.isLoading) {
+    return <CheckInCardSkeleton />;
+  }
+
   return (
+    <>
     <Card className="mx-4 my-2">
       <View className="flex-row items-start justify-between gap-2">
         <View className="flex-1 min-w-0 flex-row items-center">
@@ -151,6 +232,43 @@ export const CheckInCard: React.FC = () => {
         </View>
       ) : null}
 
+      {flags.attendanceSystemMode === 'CHECKIN_POLICY_V2' && today?.checkInPolicyV2?.enabled ? (
+        <View className="mt-2">
+          {today.checkInPolicyV2.requiredCheckInLocation ? (
+            <View className="flex-row items-start">
+              <MapPin size={14} color="#64748b" style={{ marginTop: 2 }} />
+              <Text size="xs" tone="muted" className="ml-1.5 flex-1">
+                {hasCheckIn
+                  ? `Expected check-in: ${today.checkInPolicyV2.requiredCheckInLocation.name}`
+                  : `Check in near: ${today.checkInPolicyV2.requiredCheckInLocation.name}${
+                      today.checkInPolicyV2.requiredCheckInLocation.radiusMeters
+                        ? ` (${today.checkInPolicyV2.requiredCheckInLocation.radiusMeters}m)`
+                        : ''
+                    }`}
+              </Text>
+            </View>
+          ) : null}
+          {hasCheckIn &&
+          !isPendingSync &&
+          today.attendanceLocationStatus ? (
+            <Badge
+              tone={today.attendanceLocationStatus === 'WITHIN_ZONE' ? 'success' : 'warning'}
+              className="mt-2 self-start"
+            >
+              {today.attendanceLocationStatus === 'WITHIN_ZONE'
+                ? 'Within check-in zone'
+                : today.distanceFromCheckInPoint != null
+                  ? `Out of zone · ${formatDistanceMeters(today.distanceFromCheckInPoint)} away`
+                  : 'Out of check-in zone'}
+            </Badge>
+          ) : isPendingSync && hasCheckIn ? (
+            <Text size="xs" tone="muted" className="mt-2">
+              Zone status will update after sync
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
+
       <SelfieCaptureButton
         onCapture={() =>
           toast.show({ tone: 'info', message: 'Selfie captured (placeholder).' })
@@ -188,10 +306,21 @@ export const CheckInCard: React.FC = () => {
         </View>
       ) : null}
 
+      {flags.liveTrackingEnabled && hasCheckIn && !hasCheckOut ? (
+        <View className="mt-2 flex-row items-center">
+          <MapPin size={14} color={trackingActive ? '#16a34a' : '#f59e0b'} />
+          <Text size="xs" tone="muted" className="ml-1.5 shrink">
+            {trackingActive
+              ? 'Live location sharing is active (including in background)'
+              : 'Live tracking enabled — allow background location for continuous updates'}
+          </Text>
+        </View>
+      ) : null}
+
       <View className="flex-row mt-3">
         {!hasCheckIn ? (
           <Button
-            onPress={() => checkIn.mutate()}
+            onPress={() => void handleCheckInPress()}
             loading={checkIn.isPending}
             disabled={!canCheckIn}
             fullWidth
@@ -228,5 +357,12 @@ export const CheckInCard: React.FC = () => {
         )}
       </View>
     </Card>
+
+    <LiveTrackingConsentSheet
+      open={consentOpen}
+      onClose={() => setConsentOpen(false)}
+      onAccepted={() => runCheckIn()}
+    />
+    </>
   );
 };

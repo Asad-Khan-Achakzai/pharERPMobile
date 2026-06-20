@@ -12,6 +12,7 @@ import { territoriesApi } from '@/api/territories';
 import { syncApi } from '@/api/sync';
 import { ApiError } from '@/api/client';
 import { useAuthStore } from '@/state/authStore';
+import { attendanceLocal } from './attendanceLocal';
 import { masterCache, MASTER_KV, emptyMasterSyncMeta, type MasterSyncMeta } from './masterCache';
 import type { WeeklyPlan } from '@/domain/types';
 
@@ -130,8 +131,25 @@ export async function syncMasterData(opts: SyncMasterOptions = {}): Promise<Mast
   try {
     if (!opts.skipServerConfig) {
       try {
+        const prevCfg = useAuthStore.getState().serverConfig;
+        const prevVersion = prevCfg?.attendance?.configVersion;
         const cfg = await syncApi.getServerConfig();
         await useAuthStore.getState().setServerConfig(cfg);
+        if (
+          prevVersion != null &&
+          cfg.attendance?.configVersion != null &&
+          cfg.attendance.configVersion !== prevVersion
+        ) {
+          const uid = useAuthStore.getState().user?._id;
+          if (uid) {
+            await attendanceLocal.clearLocal(String(uid)).catch(() => {});
+          }
+        }
+        if (cfg.push?.enabled || cfg.company?.mobilePushEnabled) {
+          void import('@/features/push/registerPush').then(({ schedulePushRegistration }) =>
+            schedulePushRegistration(1000),
+          );
+        }
       } catch {
         /* cached server config remains valid */
       }
