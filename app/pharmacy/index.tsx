@@ -6,6 +6,7 @@ import { Screen } from '@/ui/Screen';
 import { Header } from '@/ui/Header';
 import { SearchField } from '@/ui/SearchField';
 import { PressableCard } from '@/ui/Card';
+import { Avatar } from '@/ui/Avatar';
 import { Text } from '@/ui/Text';
 import { Badge } from '@/ui/Badge';
 import { Button } from '@/ui/Button';
@@ -64,7 +65,8 @@ function PharmaciesScreenImpl() {
           renderItem={({ item }) => (
             <PressableCard onPress={() => pushWithReturn(`/pharmacy/${item._id}`)}>
               <View className="flex-row items-center justify-between">
-                <View className="flex-1 pr-2">
+                <Avatar name={item.name} uri={item.imageUrl ?? undefined} size="md" />
+                <View className="flex-1 px-3">
                   <Text size="base" weight="semibold" numberOfLines={1}>
                     {item.name}
                   </Text>

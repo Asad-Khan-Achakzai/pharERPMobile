@@ -20,6 +20,7 @@ import { distributorsApi } from '@/api/products';
 import { ApiError } from '@/api/client';
 import { outbox } from '@/data/outbox';
 import { flushOutbox } from '@/data/syncEngine';
+import { useMediaPicker, type PickedMedia } from '@/hooks/useMediaPicker';
 import { EntityLookup, type LookupEntity } from '@/features/payments/EntityLookup';
 import { MoneyAccountPicker } from '@/features/payments/MoneyAccountPicker';
 import { PaymentMethodPicker } from '@/features/payments/PaymentMethodPicker';
@@ -28,7 +29,17 @@ import type { CollectorType, ID, PaymentMethod } from '@/domain/types';
 function RecordCollectionImpl() {
   const router = useRouter();
   const toast = useToast();
+  const { pick } = useMediaPicker();
+  const [receipt, setReceipt] = React.useState<PickedMedia | null>(null);
   const { pharmacyId: pharmacyIdParam } = useLocalSearchParams<{ pharmacyId?: string }>();
+
+  async function attachReceipt() {
+    const picked = await pick({ source: 'ask' });
+    if (picked) {
+      setReceipt(picked);
+      toast.show({ tone: 'success', message: 'Receipt attached' });
+    }
+  }
 
   const [collectorType, setCollectorType] = React.useState<CollectorType>('COMPANY');
   const [pharmacy, setPharmacy] = React.useState<LookupEntity | null>(null);
@@ -89,7 +100,19 @@ function RecordCollectionImpl() {
 
   const submit = useMutation({
     mutationFn: () => collectionsApi.create({ ...buildBody(), clientUuid: uuidv4() }),
-    onSuccess: () => {
+    onSuccess: async (collection) => {
+      if (receipt) {
+        await outbox.enqueueMedia({
+          feature: 'collection',
+          kind: 'PAYMENT_RECEIPT',
+          fileUri: receipt.uri,
+          mime: receipt.mime,
+          size: receipt.size,
+          relatedResource: 'collections',
+          relatedId: collection._id,
+        });
+        await flushOutbox();
+      }
       toast.show({ tone: 'success', message: 'Collection recorded' });
       router.back();
     },
@@ -168,6 +191,7 @@ function RecordCollectionImpl() {
               _id: p._id,
               name: p.name,
               subtitle: p.city ?? undefined,
+              imageUrl: p.imageUrl ?? null,
             }))}
           />
 
@@ -212,7 +236,12 @@ function RecordCollectionImpl() {
             multiline
             numberOfLines={2}
           />
-          <AttachReceiptButton variant="payment" className="mt-1" />
+          <AttachReceiptButton
+            variant="payment"
+            className="mt-1"
+            onAttach={attachReceipt}
+            helper={receipt ? 'Receipt attached' : undefined}
+          />
       </Card>
     </FormScreen>
   );

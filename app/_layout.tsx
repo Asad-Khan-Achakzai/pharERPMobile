@@ -9,6 +9,8 @@ import {
   landingRouteForUser,
 } from '@/auth/navigation';
 import '../global.css';
+/** Enable NativeWind `className` on third-party components (e.g. expo-image). */
+import '@/ui/nativewindInterop';
 /** Background location task — must load before the app tree mounts. */
 import '@/features/tracking/backgroundLocationTask';
 

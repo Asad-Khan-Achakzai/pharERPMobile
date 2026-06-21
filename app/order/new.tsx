@@ -21,6 +21,7 @@
  */
 import * as React from 'react';
 import { View, FlatList } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import 'react-native-get-random-values';
@@ -555,9 +556,17 @@ function NewOrderImpl() {
                 return (
                   <Card>
                     <View className="flex-row items-center">
-                      <View className="h-10 w-10 rounded-lg bg-primary-50 items-center justify-center mr-2">
-                        <Pill size={18} color="#2563eb" />
-                      </View>
+                      {item.imageUrl ? (
+                        <Image
+                          source={{ uri: item.imageUrl }}
+                          className="h-10 w-10 rounded-lg bg-muted mr-2"
+                          contentFit="cover"
+                        />
+                      ) : (
+                        <View className="h-10 w-10 rounded-lg bg-primary-50 items-center justify-center mr-2">
+                          <Pill size={18} color="#2563eb" />
+                        </View>
+                      )}
                       <View className="flex-1">
                         <Text size="base" weight="semibold" numberOfLines={1}>
                           {item.name}

@@ -34,7 +34,7 @@ function DoctorPickRow({
   return (
     <PressableCard className="mb-2" onPress={onPress}>
       <View className="flex-row items-center">
-        <Avatar name={doctor.name} />
+        <Avatar name={doctor.name} uri={doctor.imageUrl ?? undefined} />
         <View className="flex-1 ml-3">
           <View className="flex-row flex-wrap items-center gap-1.5">
             <Text size="base" weight="semibold" numberOfLines={1}>

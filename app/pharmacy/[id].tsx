@@ -6,6 +6,7 @@ import { Wallet } from 'lucide-react-native';
 import { Screen } from '@/ui/Screen';
 import { Header } from '@/ui/Header';
 import { Card } from '@/ui/Card';
+import { Avatar } from '@/ui/Avatar';
 import { Text, H2, Subtitle } from '@/ui/Text';
 import { Button } from '@/ui/Button';
 import { Badge } from '@/ui/Badge';
@@ -45,8 +46,13 @@ export default function PharmacyProfile() {
       <Header back title={p.name} subtitle={p.city ?? ''} />
       <Screen padded={false}>
         <Card className="mx-4 mt-2">
-          <H2>{p.name}</H2>
-          <Subtitle>{[p.address, p.city].filter(Boolean).join(', ') || '—'}</Subtitle>
+          <View className="flex-row items-center">
+            <Avatar name={p.name} uri={p.imageUrl ?? undefined} size="lg" />
+            <View className="ml-3 flex-1">
+              <H2>{p.name}</H2>
+              <Subtitle>{[p.address, p.city].filter(Boolean).join(', ') || '—'}</Subtitle>
+            </View>
+          </View>
           <View className="flex-row items-center mt-3 justify-between">
             <View>
               <Subtitle>Outstanding</Subtitle>

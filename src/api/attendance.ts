@@ -34,6 +34,7 @@ export interface TeamTodayEmployee {
   checkOutTime?: string | null;
   hasCheckedOut?: boolean;
   lateMinutes?: number | null;
+  checkInImageUrl?: string | null;
   shiftName?: string | null;
   scheduleLabel?: string | null;
   attendanceLocationStatus?: 'WITHIN_ZONE' | 'OUT_OF_ZONE';

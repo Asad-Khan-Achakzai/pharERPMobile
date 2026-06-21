@@ -33,6 +33,12 @@ export const authApi = {
     return unwrap<LoginResponse>(resp);
   },
 
+  /** Current user profile incl. a fresh transient `imageUrl` (short-lived signed URL). */
+  async me(): Promise<User> {
+    const resp = await api.get('/auth/me');
+    return unwrap<User>(resp);
+  },
+
   async registerDevice(): Promise<{ session: DeviceSession }> {
     const device = await devicePayload();
     const resp = await api.post('/auth/mobile/register-device', { device });

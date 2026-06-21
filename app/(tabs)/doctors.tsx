@@ -53,7 +53,7 @@ export default function DoctorsScreen() {
           renderItem={({ item }) => (
             <PressableCard onPress={() => pushWithReturn(`/doctor/${item._id}`)}>
               <View className="flex-row items-center">
-                <Avatar name={item.name} size="md" />
+                <Avatar name={item.name} uri={item.imageUrl ?? undefined} size="md" />
                 <View className="flex-1 ml-3">
                   <Text size="base" weight="semibold" numberOfLines={1}>
                     {item.name}

@@ -1,8 +1,8 @@
 import * as React from 'react';
-import { View, ScrollView, RefreshControl } from 'react-native';
+import { View, ScrollView, RefreshControl, Image, Modal, Pressable } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { format, parseISO, isValid } from 'date-fns';
-import { MapPin, Users } from 'lucide-react-native';
+import { MapPin, Users, X } from 'lucide-react-native';
 import { Screen } from '@/ui/Screen';
 import { Header } from '@/ui/Header';
 import { Card } from '@/ui/Card';
@@ -52,9 +52,11 @@ function zoneBadgeTone(status?: TeamTodayEmployee['attendanceLocationStatus']) {
 function TeamMemberRow({
   member,
   showZone,
+  onPreviewImage,
 }: {
   member: TeamTodayEmployee;
   showZone: boolean;
+  onPreviewImage: (uri: string) => void;
 }) {
   const statusLabel = employeeTeamStatusLabel(member.status);
   const tone = teamStatusBadgeTone(member.status);
@@ -72,10 +74,26 @@ function TeamMemberRow({
     .filter(Boolean)
     .join(' · ');
 
+  const checkInImageUrl = member.checkInImageUrl;
+
   return (
     <Card className="mb-2">
       <View className="flex-row items-center">
-        <Avatar name={member.name} />
+        {checkInImageUrl ? (
+          <Pressable
+            onPress={() => onPreviewImage(checkInImageUrl)}
+            accessibilityRole="imagebutton"
+            accessibilityLabel={`View ${member.name}'s check-in selfie`}
+            hitSlop={6}
+          >
+            <Image
+              source={{ uri: checkInImageUrl }}
+              style={{ width: 44, height: 44, borderRadius: 22 }}
+            />
+          </Pressable>
+        ) : (
+          <Avatar name={member.name} />
+        )}
         <View className="ml-3 flex-1 min-w-0">
           <Text size="base" weight="semibold" numberOfLines={1}>
             {member.name}
@@ -109,6 +127,7 @@ function TeamMemberRow({
 
 function TeamAttendanceImpl() {
   const { colors } = useTheme();
+  const [previewUri, setPreviewUri] = React.useState<string | null>(null);
   const q = useQuery({
     queryKey: ['attendance', 'team-today'],
     queryFn: () => attendanceApi.teamToday(),
@@ -178,11 +197,45 @@ function TeamAttendanceImpl() {
             </Card>
 
             {employees.map((m) => (
-              <TeamMemberRow key={m.employeeId} member={m} showZone={showZone} />
+              <TeamMemberRow
+                key={m.employeeId}
+                member={m}
+                showZone={showZone}
+                onPreviewImage={setPreviewUri}
+              />
             ))}
           </View>
         )}
       </ScrollView>
+
+      <Modal
+        visible={!!previewUri}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPreviewUri(null)}
+      >
+        <Pressable
+          onPress={() => setPreviewUri(null)}
+          className="flex-1 items-center justify-center bg-black/90 px-4"
+        >
+          {previewUri ? (
+            <Image
+              source={{ uri: previewUri }}
+              style={{ width: '100%', height: '70%', borderRadius: 16 }}
+              resizeMode="contain"
+            />
+          ) : null}
+          <Pressable
+            onPress={() => setPreviewUri(null)}
+            accessibilityRole="button"
+            accessibilityLabel="Close preview"
+            hitSlop={10}
+            className="absolute top-12 right-6 h-10 w-10 rounded-full bg-white/15 items-center justify-center"
+          >
+            <X size={22} color="#ffffff" />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </Screen>
   );
 }

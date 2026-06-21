@@ -71,7 +71,7 @@ export default function DoctorProfile() {
       <Screen padded={false}>
         <Card className="mx-4 mt-2">
           <View className="flex-row items-center">
-            <Avatar name={d.name} size="lg" />
+            <Avatar name={d.name} uri={d.imageUrl ?? undefined} size="lg" />
             <View className="ml-3 flex-1">
               <H2>{d.name}</H2>
               <Subtitle>{d.specialization ?? '—'}</Subtitle>

@@ -42,6 +42,7 @@ import { Text, H2 } from '@/ui/Text';
 import { Avatar } from '@/ui/Avatar';
 import { Button } from '@/ui/Button';
 import { useAuthStore } from '@/state/authStore';
+import { useMyProfile } from '@/hooks/useMyProfile';
 import { useTheme, type ThemePreference } from '@/theme/ThemeProvider';
 import { authApi } from '@/api/auth';
 import { hasAnyPermission, hasPermission } from '@/auth/rbac';
@@ -242,6 +243,7 @@ export default function MoreScreen() {
   const router = useRouter();
   const pushWithReturn = usePushWithReturn();
   const { user, company, signOut } = useAuthStore();
+  const { data: me } = useMyProfile();
   const { preference, setPreference, colors } = useTheme();
 
   function onThemeSelect(next: ThemePreference) {
@@ -296,7 +298,7 @@ export default function MoreScreen() {
       <Header title="More" />
       <Card className="mx-4 mt-2">
         <View className="flex-row items-center">
-          <Avatar name={user?.name} size="lg" />
+          <Avatar name={user?.name} uri={me?.imageUrl ?? undefined} size="lg" />
           <View className="ml-3 flex-1">
             <H2 numberOfLines={1}>{user?.name ?? '—'}</H2>
             <Text size="xs" tone="muted" numberOfLines={1}>

@@ -14,9 +14,16 @@ import { ApiError } from '@/api/client';
 import { useAuthStore } from '@/state/authStore';
 import { attendanceLocal } from './attendanceLocal';
 import { masterCache, MASTER_KV, emptyMasterSyncMeta, type MasterSyncMeta } from './masterCache';
-import type { WeeklyPlan } from '@/domain/types';
+import type { Distributor, Product, WeeklyPlan } from '@/domain/types';
 
 const PAGE_SIZE = 100;
+/** Cap used by the auth-only `/lookup` fallback (server clamps to LOOKUP_MAX=100). */
+const LOOKUP_FALLBACK_LIMIT = 100;
+
+/** 403 from a `*.view`-gated list endpoint — fall back to the auth-only lookup. */
+function isPermissionError(err: unknown): boolean {
+  return err instanceof ApiError && err.status === 403;
+}
 
 let syncRunning = false;
 let syncWaiters: Array<() => void> = [];
@@ -82,6 +89,51 @@ async function syncPaginatedPharmacies(companyId: string): Promise<number> {
     page += 1;
   }
   return count;
+}
+
+/**
+ * Limited-permission roles (e.g. medical reps without `doctors.view`) can't hit
+ * the paginated list endpoint. Fall back to the auth-only `/doctors/lookup` so
+ * the offline cache is still populated with their scoped set.
+ */
+async function syncDoctorsResilient(companyId: string): Promise<number> {
+  try {
+    return await syncPaginatedDoctors(companyId);
+  } catch (err) {
+    if (!isPermissionError(err)) throw err;
+    const items = await doctorsApi.lookup('', LOOKUP_FALLBACK_LIMIT);
+    if (items.length) await masterCache.upsertDoctors(companyId, items);
+    return items.length;
+  }
+}
+
+async function syncPharmaciesResilient(companyId: string): Promise<number> {
+  try {
+    return await syncPaginatedPharmacies(companyId);
+  } catch (err) {
+    if (!isPermissionError(err)) throw err;
+    const items = await pharmaciesApi.lookup('', LOOKUP_FALLBACK_LIMIT);
+    if (items.length) await masterCache.upsertPharmacies(companyId, items);
+    return items.length;
+  }
+}
+
+async function fetchProductsResilient(): Promise<Product[]> {
+  try {
+    return await productsApi.list();
+  } catch (err) {
+    if (!isPermissionError(err)) throw err;
+    return productsApi.lookup('', LOOKUP_FALLBACK_LIMIT);
+  }
+}
+
+async function fetchDistributorsResilient(): Promise<Distributor[]> {
+  try {
+    return await distributorsApi.list();
+  } catch (err) {
+    if (!isPermissionError(err)) throw err;
+    return distributorsApi.lookup('', LOOKUP_FALLBACK_LIMIT);
+  }
 }
 
 async function syncPlanDetails(plans: WeeklyPlan[]): Promise<number> {
@@ -155,35 +207,43 @@ export async function syncMasterData(opts: SyncMasterOptions = {}): Promise<Mast
       }
     }
 
-    const doctorsCount = await syncPaginatedDoctors(companyId);
+    const doctorsCount = await syncDoctorsResilient(companyId);
     meta.doctors = { count: doctorsCount, syncedAt: Date.now() };
     meta.doctorsSince = formatISO(new Date());
 
-    const pharmaciesCount = await syncPaginatedPharmacies(companyId);
+    const pharmaciesCount = await syncPharmaciesResilient(companyId);
     meta.pharmacies = { count: pharmaciesCount, syncedAt: Date.now() };
     meta.pharmaciesSince = formatISO(new Date());
 
-    const products = await productsApi.list();
+    const products = await fetchProductsResilient();
     await masterCache.replaceProducts(companyId, products);
     meta.products = { count: products.length, syncedAt: Date.now() };
     meta.productsSince = formatISO(new Date());
 
-    const distributors = await distributorsApi.list();
+    const distributors = await fetchDistributorsResilient();
     await masterCache.replaceDistributors(companyId, distributors);
     meta.distributors = { count: distributors.length, syncedAt: Date.now() };
 
-    const myPlans = await weeklyPlansApi.list({ limit: 100 });
-    await masterCache.upsertWeeklyPlans(companyId, userId, myPlans);
-    await masterCache.setWeeklyPlansList(MASTER_KV.weeklyPlansMine(userId), myPlans);
-    await syncPlanDetails(myPlans);
-    meta.weeklyPlans = { count: myPlans.length, syncedAt: Date.now() };
+    try {
+      const myPlans = await weeklyPlansApi.list({ limit: 100 });
+      await masterCache.upsertWeeklyPlans(companyId, userId, myPlans);
+      await masterCache.setWeeklyPlansList(MASTER_KV.weeklyPlansMine(userId), myPlans);
+      await syncPlanDetails(myPlans);
+      meta.weeklyPlans = { count: myPlans.length, syncedAt: Date.now() };
+    } catch (err) {
+      if (!isPermissionError(err)) throw err;
+    }
 
-    const today = await planItemsApi.listToday();
-    await masterCache.setTodayBundle(userId, today, companyId);
-    meta.planItemsToday = {
-      count: today.items?.length ?? 0,
-      syncedAt: Date.now(),
-    };
+    try {
+      const today = await planItemsApi.listToday();
+      await masterCache.setTodayBundle(userId, today, companyId);
+      meta.planItemsToday = {
+        count: today.items?.length ?? 0,
+        syncedAt: Date.now(),
+      };
+    } catch (err) {
+      if (!isPermissionError(err)) throw err;
+    }
 
     try {
       const tree = await territoriesApi.tree();

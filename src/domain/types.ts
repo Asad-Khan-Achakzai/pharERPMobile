@@ -61,6 +61,8 @@ export interface User {
     mrepOwnershipAudit?: boolean;
   };
   isActive: boolean;
+  /** Transient signed profile image URL (resolved by backend, not persisted). */
+  imageUrl?: string | null;
 }
 
 export interface Doctor {
@@ -97,6 +99,8 @@ export interface Doctor {
   locationStatus?: string;
   latitude?: number | null;
   longitude?: number | null;
+  /** Transient short-lived signed URL resolved from MediaAsset (source of truth). */
+  imageUrl?: string | null;
 }
 
 export interface PharmacyBonusScheme {
@@ -121,6 +125,8 @@ export interface Pharmacy {
   /** Derived from ledger summary; not a stored field on the Pharmacy doc. */
   outstanding?: number;
   isDeleted?: boolean;
+  /** Transient short-lived signed URL resolved from MediaAsset (source of truth). */
+  imageUrl?: string | null;
 }
 
 export interface Distributor {
@@ -154,6 +160,8 @@ export interface Product {
   pts?: number;
   category?: string;
   isActive?: boolean;
+  /** Transient short-lived signed URL resolved from MediaAsset (source of truth). */
+  imageUrl?: string | null;
 }
 
 export interface VisitLog {

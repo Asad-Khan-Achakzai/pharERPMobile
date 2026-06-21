@@ -18,6 +18,7 @@
  */
 import * as React from 'react';
 import { View, ScrollView, Linking } from 'react-native';
+import { Image } from 'expo-image';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
@@ -56,7 +57,10 @@ import { ProductVisualViewer } from '@/ui/media/ProductVisualViewer';
 import { masterQueries } from '@/data/masterQueries';
 import { ApiError } from '@/api/client';
 import { useFlags } from '@/hooks/useFlags';
+import { useMediaPicker, type PickedMedia } from '@/hooks/useMediaPicker';
 import { visitOffline } from '@/data/visitOffline';
+import { outbox } from '@/data/outbox';
+import { flushOutbox } from '@/data/syncEngine';
 import { getDb } from '@/data/db';
 import type { Doctor, ID, PlanItem, Product } from '@/domain/types';
 
@@ -112,6 +116,16 @@ export const ActiveVisitScreen: React.FC<ActiveVisitScreenProps> = ({
   const toast = useToast();
   const qc = useQueryClient();
   const flags = useFlags();
+  const { pick } = useMediaPicker();
+  const [visitPhotos, setVisitPhotos] = React.useState<PickedMedia[]>([]);
+
+  async function captureVisitPhoto() {
+    const picked = await pick({ source: 'camera' });
+    if (picked) {
+      setVisitPhotos((prev) => [...prev, picked]);
+      toast.show({ tone: 'success', message: 'Photo added' });
+    }
+  }
   const targetDoctorId = mode === 'planned' ? extractDoctorId(planItem) : doctorId;
   const plannedDoctor = mode === 'planned' ? extractPlannedDoctor(planItem) : null;
 
@@ -285,6 +299,20 @@ export const ActiveVisitScreen: React.FC<ActiveVisitScreenProps> = ({
     onSuccess: async (result) => {
       const db = await getDb();
       await db.runAsync(`DELETE FROM visit_drafts WHERE client_uuid = ?`, [clientUuid]);
+      if (visitPhotos.length && result.visitId) {
+        for (const photo of visitPhotos) {
+          await outbox.enqueueMedia({
+            feature: 'visit',
+            kind: 'VISIT_PHOTO',
+            fileUri: photo.uri,
+            mime: photo.mime,
+            size: photo.size,
+            relatedResource: 'visits',
+            relatedId: result.visitId,
+          });
+        }
+        void flushOutbox();
+      }
       toast.show({
         tone: result.queued ? 'info' : 'success',
         message: result.queued ? 'Visit saved offline — will sync automatically' : 'Visit recorded',
@@ -375,7 +403,13 @@ export const ActiveVisitScreen: React.FC<ActiveVisitScreenProps> = ({
       ) : null}
 
       <ScrollView contentContainerClassName="px-4 pb-32 pt-1">
-        {tab === 'details' ? <DetailsTab doctor={doctor.data ?? null} /> : null}
+        {tab === 'details' ? (
+          <DetailsTab
+            doctor={doctor.data ?? null}
+            onAddPhoto={captureVisitPhoto}
+            photoCount={visitPhotos.length}
+          />
+        ) : null}
         {tab === 'products' ? (
           <ProductsTab
             products={products.data ?? []}
@@ -445,7 +479,11 @@ function territoryLine(doctor: Doctor | null): string {
   return [doctor.doctorBrick, doctor.zone].filter(Boolean).join(' · ') || '—';
 }
 
-const DetailsTab: React.FC<{ doctor: Doctor | null }> = ({ doctor }) => {
+const DetailsTab: React.FC<{
+  doctor: Doctor | null;
+  onAddPhoto?: () => void;
+  photoCount?: number;
+}> = ({ doctor, onAddPhoto, photoCount = 0 }) => {
   const gpsCoords = formatDoctorCoords(doctor?.latitude, doctor?.longitude);
 
   return (
@@ -487,9 +525,9 @@ const DetailsTab: React.FC<{ doctor: Doctor | null }> = ({ doctor }) => {
     <AddPhotoButton
       cameraOnly
       label="Visit photo"
-      helper="Captures stay on-device until enabled"
+      helper={photoCount > 0 ? `${photoCount} photo(s) added` : 'Uploads after the visit is saved'}
       className="mt-4"
-      onPick={() => undefined}
+      onPick={onAddPhoto}
     />
   </Card>
   );
@@ -518,9 +556,17 @@ const ProductsTab: React.FC<{
               title={p.name}
               subtitle={[p.sku, p.packSize].filter(Boolean).join(' · ')}
               left={
-                <View className="h-9 w-9 rounded-lg bg-primary-50 items-center justify-center">
-                  <Pill size={18} color="#2563eb" />
-                </View>
+                p.imageUrl ? (
+                  <Image
+                    source={{ uri: p.imageUrl }}
+                    className="h-9 w-9 rounded-lg bg-muted"
+                    contentFit="cover"
+                  />
+                ) : (
+                  <View className="h-9 w-9 rounded-lg bg-primary-50 items-center justify-center">
+                    <Pill size={18} color="#2563eb" />
+                  </View>
+                )
               }
               right={
                 <Badge tone={isPrimary ? 'success' : isSelected ? 'primary' : 'muted'}>

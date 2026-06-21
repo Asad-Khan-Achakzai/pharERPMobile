@@ -91,7 +91,11 @@ export default function OutboxScreen() {
               size="sm"
               variant="outline"
               loading={masterSyncing}
-              onPress={() => void runMasterSync('manual').then(() => refreshMeta())}
+              onPress={() =>
+                void runMasterSync('manual')
+                  .catch(() => {})
+                  .finally(() => refreshMeta())
+              }
             >
               Refresh
             </Button>

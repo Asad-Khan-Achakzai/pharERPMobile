@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { View } from 'react-native';
-import { Clock, MapPin, CloudOff } from 'lucide-react-native';
+import { View, Image, Pressable } from 'react-native';
+import { Clock, MapPin, CloudOff, X } from 'lucide-react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { Card } from '@/ui/Card';
@@ -13,8 +13,10 @@ import { CheckInCardSkeleton } from '@/features/home/homeCardSkeletons';
 import { useToast } from '@/ui/Toast';
 import { SelfieCaptureButton } from '@/ui/media/SelfieCaptureButton';
 import { attendanceOffline } from '@/data/attendanceOffline';
-import { subscribeAttendanceRefresh } from '@/data/syncEngine';
+import { subscribeAttendanceRefresh, flushOutbox } from '@/data/syncEngine';
+import { outbox } from '@/data/outbox';
 import { useFlags } from '@/hooks/useFlags';
+import { useMediaPicker, type PickedMedia } from '@/hooks/useMediaPicker';
 import { formatLateDuration } from '@/utils/formatDuration';
 import { formatDistanceMeters } from '@/utils/formatDistance';
 import { resolveAttendanceUiStatus } from '@/utils/attendanceStatus';
@@ -29,10 +31,20 @@ export const CheckInCard: React.FC = () => {
   const toast = useToast();
   const qc = useQueryClient();
   const flags = useFlags();
+  const { pick } = useMediaPicker();
   const [reason, setReason] = React.useState('');
   const [notes, setNotes] = React.useState('');
   const [consentOpen, setConsentOpen] = React.useState(false);
   const [trackingActive, setTrackingActive] = React.useState(false);
+  const [selfie, setSelfie] = React.useState<PickedMedia | null>(null);
+
+  async function captureSelfie() {
+    const picked = await pick({ source: 'camera' });
+    if (picked) {
+      setSelfie(picked);
+      toast.show({ tone: 'success', message: 'Selfie captured' });
+    }
+  }
 
   const todayQ = useQuery({
     queryKey: ['attendance', 'today'],
@@ -71,6 +83,22 @@ export const CheckInCard: React.FC = () => {
       });
       qc.setQueryData(['attendance', 'today'], doc);
       qc.invalidateQueries({ queryKey: ['dashboard', 'home'] });
+      const attendanceId = (doc as { _id?: string })._id;
+      if (selfie && !pending && attendanceId) {
+        void outbox
+          .enqueueMedia({
+            feature: 'attendance',
+            kind: 'ATTENDANCE_SELFIE',
+            fileUri: selfie.uri,
+            mime: selfie.mime,
+            size: selfie.size,
+            relatedResource: 'attendance',
+            relatedId: attendanceId,
+          })
+          .then(() => flushOutbox())
+          .then(() => setSelfie(null))
+          .catch(() => undefined);
+      }
     },
     onError: (err: unknown) => {
       const msg = (err as { message?: string })?.message;
@@ -269,12 +297,32 @@ export const CheckInCard: React.FC = () => {
         </View>
       ) : null}
 
-      <SelfieCaptureButton
-        onCapture={() =>
-          toast.show({ tone: 'info', message: 'Selfie captured (placeholder).' })
-        }
-        className="mt-3"
-      />
+      {!hasCheckIn ? (
+        selfie ? (
+          <View className="mt-3">
+            <View className="relative self-start">
+              <Image
+                source={{ uri: selfie.uri }}
+                style={{ width: 96, height: 96, borderRadius: 16 }}
+              />
+              <Pressable
+                onPress={() => setSelfie(null)}
+                accessibilityRole="button"
+                accessibilityLabel="Remove selfie"
+                hitSlop={8}
+                className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-foreground/80 items-center justify-center"
+              >
+                <X size={14} color="#ffffff" />
+              </Pressable>
+            </View>
+            <Text size="xs" tone="muted" className="mt-1.5">
+              Selfie ready — it uploads after you check in.
+            </Text>
+          </View>
+        ) : (
+          <SelfieCaptureButton onCapture={captureSelfie} className="mt-3" />
+        )
+      ) : null}
 
       {!hasCheckIn && canCheckIn ? (
         <TextField

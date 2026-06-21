@@ -68,7 +68,9 @@ function buildTimedBody(
 }
 
 export const visitOffline = {
-  async submit(payload: VisitSubmitPayload): Promise<{ queued: boolean; clientUuid: string }> {
+  async submit(
+    payload: VisitSubmitPayload,
+  ): Promise<{ queued: boolean; clientUuid: string; visitId?: string }> {
     const user = useAuthStore.getState().user;
     if (!hasPermission(user, 'weeklyPlans.markVisit')) {
       throw new ApiError({
@@ -83,20 +85,24 @@ export const visitOffline = {
     const body = buildTimedBody(payload.startedAt, payload.body, location);
 
     try {
+      let visitId: string | undefined;
       if (payload.mode === 'planned' && payload.planItem?._id) {
-        await planItemsApi.markVisit(payload.planItem._id, {
+        const res = await planItemsApi.markVisit(payload.planItem._id, {
           ...(body as unknown as MarkVisitInput),
           clientUuid,
         });
+        const r = res as unknown as { visitLogId?: string; visitLog?: { _id?: string } };
+        visitId = r.visitLogId ?? r.visitLog?._id;
       } else {
-        await visitsApi.unplanned({
+        const res = await visitsApi.unplanned({
           ...(body as unknown as UnplannedVisitInput),
           doctorId: payload.doctorId!,
           unplannedReason: payload.unplannedReason as UnplannedVisitInput['unplannedReason'],
           clientUuid,
         });
+        visitId = (res as unknown as { _id?: string })._id;
       }
-      return { queued: false, clientUuid };
+      return { queued: false, clientUuid, visitId };
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) throw err;
       if (!isRetriableVisitError(err)) throw err;

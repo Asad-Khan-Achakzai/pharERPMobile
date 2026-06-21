@@ -6,6 +6,7 @@ import { Sheet } from '@/ui/Sheet';
 import { Text, Label } from '@/ui/Text';
 import { SearchField } from '@/ui/SearchField';
 import { Badge } from '@/ui/Badge';
+import { Avatar } from '@/ui/Avatar';
 import { PressableCard } from '@/ui/Card';
 import { Button } from '@/ui/Button';
 import { ListSkeletonList } from '@/ui/listCardSkeletons';
@@ -50,18 +51,21 @@ function DoctorRow({
   return (
     <PressableCard className="mb-2" onPress={onToggle}>
       <View className="flex-row items-start justify-between">
-        <View className="flex-1 pr-2">
-          <View className="flex-row flex-wrap items-center gap-1.5">
-            <Text size="sm" weight={selected ? 'semibold' : 'medium'}>
-              {doctor.name}
-            </Text>
-            {badgeLabel ? <Badge tone="success">{badgeLabel}</Badge> : null}
+        <View className="flex-row items-start flex-1 pr-2">
+          <Avatar name={doctor.name} uri={doctor.imageUrl ?? undefined} size="sm" />
+          <View className="flex-1 ml-3">
+            <View className="flex-row flex-wrap items-center gap-1.5">
+              <Text size="sm" weight={selected ? 'semibold' : 'medium'}>
+                {doctor.name}
+              </Text>
+              {badgeLabel ? <Badge tone="success">{badgeLabel}</Badge> : null}
+            </View>
+            {subtitle ? (
+              <Text size="xs" tone="muted" numberOfLines={2}>
+                {subtitle}
+              </Text>
+            ) : null}
           </View>
-          {subtitle ? (
-            <Text size="xs" tone="muted" numberOfLines={2}>
-              {subtitle}
-            </Text>
-          ) : null}
         </View>
         {selected ? <Check size={18} color={checkColor} /> : null}
       </View>

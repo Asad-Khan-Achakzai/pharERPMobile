@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { View } from 'react-native';
 import { useAuthStore } from '@/state/authStore';
+import { useMyProfile } from '@/hooks/useMyProfile';
 import { Avatar } from '@/ui/Avatar';
 import { Card } from '@/ui/Card';
 import { H2, Text, Subtitle } from '@/ui/Text';
@@ -10,6 +11,7 @@ import { HomeHeroCardSkeleton } from '@/features/home/homeCardSkeletons';
 export const HomeHero: React.FC = () => {
   const user = useAuthStore((s) => s.user);
   const company = useAuthStore((s) => s.company);
+  const { data: me } = useMyProfile();
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
@@ -20,7 +22,7 @@ export const HomeHero: React.FC = () => {
   return (
     <Card className="mx-4 mt-4">
       <View className="flex-row items-center">
-        <Avatar name={user?.name} size="lg" />
+        <Avatar name={user?.name} uri={me?.imageUrl ?? undefined} size="lg" />
         <View className="ml-3 flex-1">
           <Subtitle>{greeting}</Subtitle>
           <H2 numberOfLines={1}>{user?.name ?? 'Field rep'}</H2>

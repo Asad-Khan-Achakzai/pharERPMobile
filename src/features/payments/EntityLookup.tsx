@@ -5,12 +5,14 @@ import { SearchField } from '@/ui/SearchField';
 import { ListRow, Divider } from '@/ui/ListRow';
 import { FilterSelectionBar } from '@/ui/FilterSelectionBar';
 import { Badge } from '@/ui/Badge';
+import { Avatar } from '@/ui/Avatar';
 import type { ID } from '@/domain/types';
 
 export interface LookupEntity {
   _id: ID;
   name: string;
   subtitle?: string;
+  imageUrl?: string | null;
 }
 
 interface EntityLookupProps {
@@ -81,6 +83,7 @@ export function EntityLookup({
                     <ListRow
                       title={row.name}
                       subtitle={row.subtitle}
+                      left={<Avatar name={row.name} uri={row.imageUrl ?? undefined} size="sm" />}
                       onPress={() => {
                         onChange(row);
                         onSearchChange('');

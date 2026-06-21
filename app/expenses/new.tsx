@@ -34,6 +34,7 @@ import { ApiError } from '@/api/client';
 import { outbox } from '@/data/outbox';
 import { localEntities } from '@/data/localEntities';
 import { flushOutbox } from '@/data/syncEngine';
+import { useMediaPicker, type PickedMedia } from '@/hooks/useMediaPicker';
 import type { ExpenseCategory } from '@/domain/types';
 
 const CATEGORIES: { key: ExpenseCategory; label: string }[] = [
@@ -53,10 +54,33 @@ function NewExpenseImpl() {
   const router = useRouter();
   const toast = useToast();
   const qc = useQueryClient();
+  const { pick } = useMediaPicker();
   const [category, setCategory] = React.useState<ExpenseCategory>('OTHER');
   const [amount, setAmount] = React.useState('');
   const [description, setDescription] = React.useState('');
   const [date, setDate] = React.useState(todayYmd());
+  const [receipt, setReceipt] = React.useState<PickedMedia | null>(null);
+
+  async function attachReceipt() {
+    const picked = await pick({ source: 'ask' });
+    if (picked) {
+      setReceipt(picked);
+      toast.show({ tone: 'success', message: 'Receipt attached' });
+    }
+  }
+
+  async function enqueueReceipt(expenseId: string) {
+    if (!receipt) return;
+    await outbox.enqueueMedia({
+      feature: 'expense',
+      kind: 'EXPENSE_RECEIPT',
+      fileUri: receipt.uri,
+      mime: receipt.mime,
+      size: receipt.size,
+      relatedResource: 'expenses',
+      relatedId: expenseId,
+    });
+  }
 
   function buildBody() {
     return {
@@ -69,8 +93,10 @@ function NewExpenseImpl() {
 
   const submit = useMutation({
     mutationFn: () => expensesApi.create({ ...buildBody(), clientUuid: uuidv4() }),
-    onSuccess: (expense) => {
+    onSuccess: async (expense) => {
       const pending = expense.status === 'PENDING';
+      await enqueueReceipt(expense._id);
+      if (receipt) await flushOutbox();
       toast.show({
         tone: 'success',
         message: pending ? 'Expense submitted for manager approval' : 'Expense submitted',
@@ -162,9 +188,15 @@ function NewExpenseImpl() {
           numberOfLines={3}
         />
         <View className="mt-2">
-          <AttachReceiptButton variant="expense" />
+          <AttachReceiptButton
+            variant="expense"
+            onAttach={attachReceipt}
+            helper={receipt ? 'Receipt attached' : undefined}
+          />
           <Text size="xs" tone="muted" className="mt-2">
-            Receipt upload is optional. UI stays visible whether storage is configured or not.
+            {receipt
+              ? 'Receipt will upload after the expense is saved.'
+              : 'Receipt upload is optional. UI stays visible whether storage is configured or not.'}
           </Text>
         </View>
       </Card>
