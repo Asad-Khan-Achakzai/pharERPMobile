@@ -16,6 +16,7 @@ import * as Haptics from 'expo-haptics';
 import {
   BellRing,
   Briefcase,
+  CalendarDays,
   ClipboardCheck,
   ClipboardList,
   CloudUpload,
@@ -105,6 +106,13 @@ const ENTRIES_PRIMARY: MoreEntry[] = [
     Icon: Briefcase,
     route: '/plan/weekly',
     permissionAny: ['weeklyPlans.view', 'weeklyPlans.edit'],
+  },
+  {
+    key: 'calendar',
+    title: 'Calendar',
+    Icon: CalendarDays,
+    route: '/calendar',
+    permissionAny: ['weeklyPlans.view'],
   },
 ];
 

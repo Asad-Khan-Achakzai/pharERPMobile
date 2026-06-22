@@ -83,6 +83,8 @@ export const SCREEN_PERMISSIONS = {
   visit_active: { anyOf: ['weeklyPlans.markVisit'] },
   weekly_plan: { anyOf: ['weeklyPlans.view', 'weeklyPlans.edit', 'weeklyPlans.create'] },
   weekly_plan_detail: { anyOf: ['weeklyPlans.view'] },
+  /** Read-only field-execution calendar. Web parity: `/calendar` gated by `weeklyPlans.view`. */
+  calendar: { anyOf: ['weeklyPlans.view'] },
   weekly_plan_new: { anyOf: ['weeklyPlans.create'] },
   /** Web parity: `MrepCommandCenterPage` + `/targets` for managers. */
   kpi: {
