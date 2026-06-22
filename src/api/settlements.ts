@@ -6,6 +6,7 @@ export interface SettlementCreateInput {
   direction: SettlementDirection;
   amount: number;
   paymentMethod: PaymentMethod;
+  moneyAccountId: ID;
   referenceNumber?: string;
   notes?: string;
   clientUuid?: string;

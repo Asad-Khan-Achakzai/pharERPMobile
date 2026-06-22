@@ -608,6 +608,7 @@ export interface Settlement {
   direction: SettlementDirection;
   amount: number;
   paymentMethod: PaymentMethod;
+  moneyAccountId?: ID | { _id: ID; code?: string; name?: string; moneyAccountNature?: string } | null;
   referenceNumber?: string;
   notes?: string;
   date?: ISO;

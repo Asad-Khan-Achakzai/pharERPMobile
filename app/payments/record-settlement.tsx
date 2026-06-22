@@ -19,8 +19,9 @@ import { ApiError } from '@/api/client';
 import { outbox } from '@/data/outbox';
 import { flushOutbox } from '@/data/syncEngine';
 import { EntityLookup, type LookupEntity } from '@/features/payments/EntityLookup';
+import { MoneyAccountPicker } from '@/features/payments/MoneyAccountPicker';
 import { PaymentMethodPicker } from '@/features/payments/PaymentMethodPicker';
-import type { PaymentMethod, SettlementDirection } from '@/domain/types';
+import type { ID, PaymentMethod, SettlementDirection } from '@/domain/types';
 
 function RecordSettlementImpl() {
   const router = useRouter();
@@ -31,9 +32,12 @@ function RecordSettlementImpl() {
   const [distributor, setDistributor] = React.useState<LookupEntity | null>(null);
   const [distributorSearch, setDistributorSearch] = React.useState('');
   const [amount, setAmount] = React.useState('');
+  const [moneyAccountId, setMoneyAccountId] = React.useState<ID | ''>('');
   const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>('CASH');
   const [referenceNumber, setReferenceNumber] = React.useState('');
   const [notes, setNotes] = React.useState('');
+
+  const isDistributorToCompany = direction === 'DISTRIBUTOR_TO_COMPANY';
 
   const distributorHits = useQuery({
     queryKey: ['distributors', 'lookup', distributorSearch.trim()],
@@ -41,7 +45,7 @@ function RecordSettlementImpl() {
     enabled: distributorSearch.trim().length >= 1 && !distributor,
   });
 
-  const valid = !!distributor && Number(amount) > 0;
+  const valid = !!distributor && Number(amount) > 0 && !!moneyAccountId;
 
   function buildBody() {
     return {
@@ -49,6 +53,7 @@ function RecordSettlementImpl() {
       direction,
       amount: Number(amount),
       paymentMethod,
+      moneyAccountId: moneyAccountId as ID,
       referenceNumber: referenceNumber.trim() || undefined,
       notes: notes.trim() || undefined,
     };
@@ -139,6 +144,22 @@ function RecordSettlementImpl() {
             value={amount}
             onChangeText={setAmount}
             required
+          />
+
+          <MoneyAccountPicker
+            value={moneyAccountId}
+            onChange={setMoneyAccountId}
+            required
+            label={
+              isDistributorToCompany
+                ? 'Deposit to (cash/bank account)'
+                : 'Paid from (cash/bank account)'
+            }
+            helperText={
+              isDistributorToCompany
+                ? 'Which account received this settlement'
+                : 'Which account this settlement was paid from'
+            }
           />
 
           <PaymentMethodPicker value={paymentMethod} onChange={setPaymentMethod} />

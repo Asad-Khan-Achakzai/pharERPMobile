@@ -10,9 +10,17 @@ interface MoneyAccountPickerProps {
   value: ID | '';
   onChange: (id: ID) => void;
   required?: boolean;
+  label?: string;
+  helperText?: string;
 }
 
-export function MoneyAccountPicker({ value, onChange, required }: MoneyAccountPickerProps) {
+export function MoneyAccountPicker({
+  value,
+  onChange,
+  required,
+  label = 'Deposit to (cash/bank account)',
+  helperText = 'Which account received this money',
+}: MoneyAccountPickerProps) {
   const q = useQuery({
     queryKey: ['accounts', 'money'],
     queryFn: () => accountsApi.listMoneyAccounts(),
@@ -27,11 +35,11 @@ export function MoneyAccountPicker({ value, onChange, required }: MoneyAccountPi
   return (
     <View className="mb-3">
       <Label>
-        Deposit to (cash/bank account)
+        {label}
         {required ? ' *' : ''}
       </Label>
       <Text size="xs" tone="muted" className="mb-2">
-        Which account received this money
+        {helperText}
       </Text>
       {q.isLoading ? (
         <Text size="sm" tone="muted">
