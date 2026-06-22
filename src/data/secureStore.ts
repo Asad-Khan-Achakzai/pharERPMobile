@@ -6,7 +6,6 @@ import * as SecureStore from 'expo-secure-store';
  *   - accessToken (JWT)
  *   - refreshToken
  *   - deviceId (stable per device, but tiny)
- *   - biometricEnabled flag
  *
  * Non-secret/larger payloads (user, company, serverConfig) live in the SQLite
  * `kv` table via `kvStore.ts`. See `authStore.ts` for the orchestration.
@@ -15,7 +14,6 @@ const KEYS = {
   accessToken: 'pharerp.accessToken',
   refreshToken: 'pharerp.refreshToken',
   deviceId: 'pharerp.deviceId',
-  biometricEnabled: 'pharerp.biometric',
 } as const;
 
 export type SecureKey = keyof typeof KEYS;

@@ -2,7 +2,7 @@
  * SQLite-backed key/value store for **non-secret** data that doesn't fit the
  * 2KB SecureStore size budget (cached user, company, server config, etc.).
  *
- * Secrets (access/refresh tokens, biometric flag) MUST stay in `secureStore.ts`.
+ * Secrets (access/refresh tokens) MUST stay in `secureStore.ts`.
  */
 import { getDb } from './db';
 

@@ -36,8 +36,6 @@
         "android.permission.ACCESS_BACKGROUND_LOCATION",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_LOCATION",
-        "android.permission.USE_BIOMETRIC",
-        "android.permission.USE_FINGERPRINT",
         "android.permission.POST_NOTIFICATIONS"
       ],
       "package": "com.asadkhanachakzie.pharmamobileapp",
@@ -84,12 +82,6 @@
     "expo-image-picker",
     {
       "photosPermission": "Allow PharmaERP to attach receipts and product photos."
-    }
-  ],
-  [
-    "expo-local-authentication",
-    {
-      "faceIDPermission": "Allow PharmaERP to use Face ID to unlock."
     }
   ],
   "@react-native-community/datetimepicker",

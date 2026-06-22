@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { View, Pressable } from 'react-native';
-import * as LocalAuthentication from 'expo-local-authentication';
 import { Eye, EyeOff } from 'lucide-react-native';
 import { Screen } from '@/ui/Screen';
 import { Button } from '@/ui/Button';
@@ -20,15 +19,6 @@ export default function LoginScreen() {
   const [password, setPassword] = React.useState('');
   const [showPw, setShowPw] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
-  const [biometricAvailable, setBiometricAvailable] = React.useState(false);
-
-  React.useEffect(() => {
-    (async () => {
-      const hardware = await LocalAuthentication.hasHardwareAsync();
-      const enrolled = await LocalAuthentication.isEnrolledAsync();
-      setBiometricAvailable(hardware && enrolled);
-    })();
-  }, []);
 
   async function onSubmit() {
     if (!email || !password) {
@@ -65,17 +55,6 @@ export default function LoginScreen() {
       toast.show({ tone: 'danger', message: msg ?? 'Login failed' });
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function tryBiometric() {
-    const res = await LocalAuthentication.authenticateAsync({
-      promptMessage: 'Unlock PharmaERP',
-    });
-    if (!res.success) {
-      toast.show({ tone: 'warning', message: 'Biometric cancelled' });
-    } else {
-      toast.show({ tone: 'info', message: 'Sign in with credentials to continue' });
     }
   }
 
@@ -133,12 +112,6 @@ export default function LoginScreen() {
       <Button onPress={onSubmit} loading={loading} fullWidth>
         Sign in
       </Button>
-
-      {biometricAvailable ? (
-        <Button variant="outline" onPress={tryBiometric} fullWidth className="mt-3">
-          Use biometric
-        </Button>
-      ) : null}
 
       <View className="mt-12 items-center">
         <Text size="xs" tone="muted">
