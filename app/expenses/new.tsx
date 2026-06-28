@@ -7,7 +7,7 @@
  *    `pharmaERPBackend/src/validators/expense.validator.js`
  *
  *  Canonical categories live in `EXPENSE_CATEGORY` enum:
- *    DOCTOR_INVESTMENT | SALARY | RENT | LOGISTICS | OFFICE | OTHER.
+ *    SALARY | RENT | LOGISTICS | OFFICE | OTHER.
  *
  *  Mobile sends `category`; backend maps to COA accounts (default Cash).
  *  When company `expenseApprovalRequired` is on, status is PENDING until
@@ -38,7 +38,6 @@ import { useMediaPicker, type PickedMedia } from '@/hooks/useMediaPicker';
 import type { ExpenseCategory } from '@/domain/types';
 
 const CATEGORIES: { key: ExpenseCategory; label: string }[] = [
-  { key: 'DOCTOR_INVESTMENT', label: 'Doctor investment' },
   { key: 'LOGISTICS', label: 'Logistics' },
   { key: 'OFFICE', label: 'Office' },
   { key: 'RENT', label: 'Rent' },

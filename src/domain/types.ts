@@ -545,7 +545,6 @@ export interface OrderItem {
  * `pharmaERPBackend/src/constants/enums.js`. NEVER simplify on mobile.
  */
 export type ExpenseCategory =
-  | 'DOCTOR_INVESTMENT'
   | 'SALARY'
   | 'RENT'
   | 'LOGISTICS'

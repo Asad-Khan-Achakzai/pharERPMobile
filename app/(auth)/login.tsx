@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { View, Pressable } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Eye, EyeOff } from 'lucide-react-native';
 import { Screen } from '@/ui/Screen';
 import { Button } from '@/ui/Button';
@@ -7,6 +8,7 @@ import { TextField } from '@/ui/TextField';
 import { Text, H1, H2, Subtitle } from '@/ui/Text';
 import { useToast } from '@/ui/Toast';
 import { authApi } from '@/api/auth';
+import { ApiError } from '@/api/client';
 import { syncApi } from '@/api/sync';
 import { syncMasterDataAfterLogin } from '@/hooks/useMasterDataSync';
 import { useAuthStore } from '@/state/authStore';
@@ -14,6 +16,7 @@ import { useThemedIcons } from '@/hooks/useThemedIcons';
 
 export default function LoginScreen() {
   const toast = useToast();
+  const router = useRouter();
   const icons = useThemedIcons();
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -51,6 +54,17 @@ export default function LoginScreen() {
        * flicker between tabs. Don't call `router.replace` here.
        */
     } catch (err: unknown) {
+      // Device control: this device is not the rep's bound device. Route to the
+      // blocked screen with the short-lived device-change token so they can
+      // request an admin-approved switch without a session.
+      if (err instanceof ApiError && err.code === 'DEVICE_NOT_REGISTERED') {
+        const data = (err.details as { data?: { deviceChangeToken?: string } } | undefined)?.data;
+        const token = data?.deviceChangeToken;
+        if (token) {
+          router.push({ pathname: '/(auth)/device-blocked', params: { token } });
+          return;
+        }
+      }
       const msg = (err as { message?: string })?.message;
       toast.show({ tone: 'danger', message: msg ?? 'Login failed' });
     } finally {

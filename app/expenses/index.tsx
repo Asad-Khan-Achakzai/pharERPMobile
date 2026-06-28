@@ -20,7 +20,6 @@ import { PermissionGate } from '@/auth/PermissionGate';
 import { usePushWithReturn } from '@/navigation/usePushWithReturn';
 
 const CATEGORY_LABEL: Record<string, string> = {
-  DOCTOR_INVESTMENT: 'Doctor investment',
   LOGISTICS: 'Logistics',
   OFFICE: 'Office',
   RENT: 'Rent',

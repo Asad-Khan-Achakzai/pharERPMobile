@@ -129,7 +129,7 @@ mirroring web.
 | `app/expenses/index.tsx` | `ExpenseListPage.tsx` | `GET /api/v1/expenses` | — |
 | `app/expenses/new.tsx` | `ExpenseListPage.tsx` dialog | `POST /api/v1/expenses` | `createExpenseSchema` |
 
-**Categories (canonical):** `DOCTOR_INVESTMENT`, `SALARY`, `RENT`, `LOGISTICS`,
+**Categories (canonical):** `SALARY`, `RENT`, `LOGISTICS`,
 `OFFICE`, `OTHER`. **No PENDING/APPROVED/REJECTED status exists** in the
 backend — expenses are auto-marked `approvedBy = currentUser` on create. We
 do not surface a phantom approval status anywhere on mobile.
