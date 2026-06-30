@@ -32,6 +32,7 @@ function DoctorRow({
   meta,
   selected,
   onToggle,
+  checkColor,
 }: {
   doctor: Doctor;
   meta?: RecommendedDoctorMeta | null;

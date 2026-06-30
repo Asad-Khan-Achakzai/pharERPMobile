@@ -444,6 +444,30 @@ export interface CheckInConfiguration {
   };
 }
 
+/** Admin-managed CP (call point) master record. */
+export interface CallPoint {
+  _id: ID;
+  companyId?: ID;
+  name: string;
+  latitude: number;
+  longitude: number;
+  isActive: boolean;
+  createdAt?: ISO;
+  updatedAt?: ISO;
+}
+
+export type CpDayKey =
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday';
+
+/** Per-day CP selection on a weekly plan. Values are CallPoint ids (or populated objects on read). */
+export type CpByDay = Partial<Record<CpDayKey, ID | CallPoint | null>>;
+
 export interface CheckInPolicyPreview {
   enabled: boolean;
   policyType?: CheckInPolicyType | null;
@@ -471,6 +495,7 @@ export interface WeeklyPlan {
   approvedAt?: ISO | null;
   rejectedReason?: string | null;
   checkInConfiguration?: CheckInConfiguration | null;
+  cpByDay?: CpByDay | null;
   totalPlanItems?: number;
   plannedDoctorCount?: number;
   planItemsCount?: number;

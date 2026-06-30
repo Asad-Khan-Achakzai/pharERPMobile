@@ -25,7 +25,8 @@ import { reportsApi } from '@/api/reports';
 import { ApiError } from '@/api/client';
 import { DoctorPickerSheet } from '@/features/weeklyPlan/DoctorPickerSheet';
 import { WeekDayCard } from '@/features/weeklyPlan/WeekDayCard';
-import { CheckInPolicyCard } from '@/features/weeklyPlan/CheckInPolicyCard';
+import { callPointsApi } from '@/api/callPoints';
+import { cpByDayToIds, dayKeyForYmd } from '@/features/weeklyPlan/cpDays';
 import { usePlanDraftStorage } from '@/hooks/usePlanDraftStorage';
 import { useAuthStore } from '@/state/authStore';
 import { useThemedIcons } from '@/hooks/useThemedIcons';
@@ -113,6 +114,30 @@ function WeeklyPlanBuilderImpl() {
     [plan?.planItems]
   );
 
+  const callPointsQ = useQuery({
+    queryKey: ['call-points', 'lookup'],
+    queryFn: () => callPointsApi.lookup({ limit: 200 }),
+    staleTime: 5 * 60 * 1000,
+  });
+  const callPoints = callPointsQ.data ?? [];
+
+  /** Per-day CP selection (by weekday key), seeded from the saved plan. */
+  const [cpByDay, setCpByDay] = React.useState<Record<string, string>>({});
+  const savedCpIds = React.useMemo(() => cpByDayToIds(plan?.cpByDay ?? null), [plan?.cpByDay]);
+  React.useEffect(() => {
+    setCpByDay(cpByDayToIds(plan?.cpByDay ?? null));
+    // Re-seed only when switching plans, not on every background refetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plan?._id]);
+
+  const cpDirty = React.useMemo(() => {
+    const keys = new Set([...Object.keys(savedCpIds), ...Object.keys(cpByDay)]);
+    for (const k of keys) {
+      if ((savedCpIds[k] ?? '') !== (cpByDay[k] ?? '')) return true;
+    }
+    return false;
+  }, [savedCpIds, cpByDay]);
+
   const repIdForCoverage = React.useMemo(() => {
     if (!plan) return null;
     const rep = plan.medicalRepId;
@@ -177,6 +202,14 @@ function WeeklyPlanBuilderImpl() {
       }
       if (notes.trim() !== (plan?.notes ?? '').trim()) {
         await weeklyPlansApi.update(id, { notes: notes.trim() });
+      }
+      if (cpDirty) {
+        const cpPayload: Record<string, string | null> = {};
+        for (const day of weekDays) {
+          const key = dayKeyForYmd(day);
+          cpPayload[key] = cpByDay[key] ?? null;
+        }
+        await weeklyPlansApi.update(id, { cpByDay: cpPayload });
       }
     },
     onSuccess: async () => {
@@ -336,7 +369,7 @@ function WeeklyPlanBuilderImpl() {
           {coverageQ.data?.coveragePercent != null ? (
             <Badge tone="info">{`Coverage ${coverageQ.data.coveragePercent}%`}</Badge>
           ) : null}
-          {hasLocalDraft ? <Badge tone="warning">Unsaved changes</Badge> : null}
+          {hasLocalDraft || cpDirty ? <Badge tone="warning">Unsaved changes</Badge> : null}
         </View>
 
         {plan.rejectedReason ? (
@@ -353,14 +386,6 @@ function WeeklyPlanBuilderImpl() {
               {readOnlyReason}
             </Text>
           </Card>
-        ) : null}
-
-        {plan.attendanceSystemMode === 'CHECKIN_POLICY_V2' ? (
-          <CheckInPolicyCard
-            planId={id!}
-            disabled={readOnly}
-            initial={plan.checkInConfiguration ?? null}
-          />
         ) : null}
 
         {metrics?.planned != null ? (
@@ -415,6 +440,8 @@ function WeeklyPlanBuilderImpl() {
           const savedTasks = dayItems.filter((it) => it.type === 'OTHER_TASK');
           const draft = getDayDraft(date);
 
+          const dayKey = dayKeyForYmd(date);
+
           return (
             <WeekDayCard
               key={date}
@@ -423,6 +450,10 @@ function WeeklyPlanBuilderImpl() {
               savedTasks={savedTasks}
               draft={draft}
               editable={canEditPlan}
+              callPoints={callPoints}
+              callPointsLoading={callPointsQ.isLoading}
+              selectedCpId={cpByDay[dayKey] ?? null}
+              onSelectCp={cpId => setCpByDay(prev => ({ ...prev, [dayKey]: cpId }))}
               onAddDoctors={() => openPicker(date)}
               onAddTask={() =>
                 updateDayDraft(date, {

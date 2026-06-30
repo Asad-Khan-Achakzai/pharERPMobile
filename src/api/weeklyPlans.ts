@@ -1,5 +1,13 @@
 import { api, unwrap } from './client';
-import type { BulkPlanItemInput, CheckInConfiguration, ID, PlanItem, WeeklyPlan, WeeklyPlanDetail } from '@/domain/types';
+import type {
+  BulkPlanItemInput,
+  CheckInConfiguration,
+  CpByDay,
+  ID,
+  PlanItem,
+  WeeklyPlan,
+  WeeklyPlanDetail
+} from '@/domain/types';
 
 export type { WeeklyPlan, WeeklyPlanDetail };
 
@@ -10,6 +18,7 @@ export interface CreateWeeklyPlanInput {
   notes?: string;
   status?: WeeklyPlan['status'];
   approvalRequired?: boolean;
+  cpByDay?: Record<string, string | null>;
 }
 
 export interface UpdateWeeklyPlanInput {
@@ -19,7 +28,10 @@ export interface UpdateWeeklyPlanInput {
   weekEndDate?: string;
   status?: WeeklyPlan['status'];
   checkInConfiguration?: CheckInConfiguration | null;
+  cpByDay?: Record<string, string | null> | null;
 }
+
+export type { CpByDay };
 
 export const weeklyPlansApi = {
   /**

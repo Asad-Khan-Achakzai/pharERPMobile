@@ -72,6 +72,7 @@ export const SCREEN_PERMISSIONS = {
   /* Detail / form screens ---------------------------------------- */
   order_new: { anyOf: ['orders.create'] },
   order_view: { anyOf: ['orders.view'] },
+  order_edit: { anyOf: ['orders.edit'] },
   doctor_new: { anyOf: ['doctors.create'] },
   doctor_edit: { anyOf: ['doctors.edit'] },
   doctor_view: { anyOf: ['doctors.view'] },
@@ -106,6 +107,8 @@ export type ScreenKey = keyof typeof SCREEN_PERMISSIONS;
 export const ACTION_PERMISSIONS = {
   order_create: { anyOf: ['orders.create'] },
   order_edit: { anyOf: ['orders.edit'] },
+  order_deliver: { anyOf: ['orders.deliver'] },
+  order_return: { anyOf: ['orders.return'] },
   doctor_create: { anyOf: ['doctors.create'] },
   doctor_edit: { anyOf: ['doctors.edit'] },
   doctor_delete: { anyOf: ['doctors.delete'] },

@@ -8,8 +8,9 @@ import { Button } from '@/ui/Button';
 import { TextField } from '@/ui/TextField';
 import { TimePickerField } from '@/ui/TimePickerField';
 import { Badge } from '@/ui/Badge';
+import { FilterChip } from '@/ui/FilterChip';
 import { useThemedIcons } from '@/hooks/useThemedIcons';
-import type { PlanItem } from '@/domain/types';
+import type { CallPoint, PlanItem } from '@/domain/types';
 import type { DayDraftState, VisitDraft } from '@/hooks/usePlanDraftStorage';
 
 const draftCardClassName = 'mb-2 p-2 rounded-lg border border-warning/30 bg-warning/10';
@@ -32,6 +33,11 @@ interface WeekDayCardProps {
   onUpdateDraft: (patch: Partial<DayDraftState>) => void;
   onOptimizeRoute?: () => void;
   optimizing?: boolean;
+  /** Active CP master list for the day-CP picker (empty hides the picker). */
+  callPoints?: CallPoint[];
+  callPointsLoading?: boolean;
+  selectedCpId?: string | null;
+  onSelectCp?: (cpId: string) => void;
 }
 
 export const WeekDayCard: React.FC<WeekDayCardProps> = ({
@@ -45,6 +51,10 @@ export const WeekDayCard: React.FC<WeekDayCardProps> = ({
   onUpdateDraft,
   onOptimizeRoute,
   optimizing = false,
+  callPoints = [],
+  callPointsLoading = false,
+  selectedCpId,
+  onSelectCp,
 }) => {
   const icons = useThemedIcons();
   const dayLabel = format(parseISO(date), 'EEEE');
@@ -75,6 +85,29 @@ export const WeekDayCard: React.FC<WeekDayCardProps> = ({
           {`${savedVisits.length + savedTasks.length + draft.visits.length + draft.otherTasks.filter((t) => t.title.trim()).length} items`}
         </Badge>
       </View>
+
+      <Label className="mb-1">Check-in point (CP)</Label>
+      {callPointsLoading ? (
+        <Text size="xs" tone="muted" className="mb-3">
+          Loading CPs…
+        </Text>
+      ) : callPoints.length === 0 ? (
+        <Text size="xs" tone="muted" className="mb-3">
+          No active CPs. Ask your Admin to add Call Points.
+        </Text>
+      ) : (
+        <View className="flex-row flex-wrap gap-2 mb-3">
+          {callPoints.map((cp) => (
+            <FilterChip
+              key={cp._id}
+              label={cp.name}
+              selected={selectedCpId === cp._id}
+              disabled={!editable}
+              onPress={() => onSelectCp?.(cp._id)}
+            />
+          ))}
+        </View>
+      )}
 
       <Label className="mb-1">Visits</Label>
       {editable && savedVisits.length >= 2 && onOptimizeRoute ? (

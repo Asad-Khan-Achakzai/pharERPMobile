@@ -13,5 +13,5 @@
  *  server url is https://pharmaerpbackend.onrender.com
  */
 module.exports = {
-  API_BASE_URL: 'http://192.168.100.8:5001',
+  API_BASE_URL: 'http://192.168.100.87:5001',
 };

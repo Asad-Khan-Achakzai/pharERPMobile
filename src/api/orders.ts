@@ -32,6 +32,29 @@ export interface NewOrderInput {
   clientUuid?: string;
 }
 
+/** Backend `updateOrderSchema` — same item shape as create. */
+export type UpdateOrderInput = {
+  pharmacyId: ID;
+  doctorId?: ID | null;
+  distributorId: ID;
+  medicalRepId?: ID;
+  items: NewOrderLineInput[];
+  notes?: string;
+};
+
+/** Backend `deliverOrderSchema` line — see `order.validator.js`. */
+export interface DeliverLineInput {
+  productId: ID;
+  quantity: number;
+}
+
+/** Backend `returnOrderSchema` line — `reason` optional. */
+export interface ReturnLineInput {
+  productId: ID;
+  quantity: number;
+  reason?: string;
+}
+
 export interface OrderListParams {
   page?: number;
   limit?: number;
@@ -69,6 +92,23 @@ export const ordersApi = {
     const resp = await api.post('/orders', body, {
       headers: clientUuid ? { 'X-Client-Uuid': clientUuid } : undefined,
     });
+    return unwrap<Order>(resp);
+  },
+
+  async update(id: ID, input: UpdateOrderInput): Promise<Order> {
+    const resp = await api.put(`/orders/${id}`, input);
+    return unwrap<Order>(resp);
+  },
+
+  /** Record a (partial) delivery. Mirrors web `ordersService.deliver`. */
+  async deliver(id: ID, items: DeliverLineInput[]): Promise<Order> {
+    const resp = await api.post(`/orders/${id}/deliver`, { items });
+    return unwrap<Order>(resp);
+  },
+
+  /** Record a (partial) return. Mirrors web `ordersService.returnOrder`. */
+  async returnOrder(id: ID, items: ReturnLineInput[]): Promise<Order> {
+    const resp = await api.post(`/orders/${id}/return`, { items });
     return unwrap<Order>(resp);
   },
 
